@@ -1,13 +1,18 @@
-const mongoose = require("mongoose");
+const Database = require("better-sqlite3");
 
-const connectDB = async () => {
-  try {
-    await mongoose.connect(process.env.MONGO_URI);
-    console.log("MongoDB Connected");
-  } catch (err) {
-    console.error("DB Error:", err);
-    process.exit(1);
-  }
-};
+// قراءة مسار قاعدة البيانات من Environment
+const dbPath = process.env.DB_PATH || "./cashbox.db";
 
-module.exports = connectDB;
+// إنشاء الاتصال بقاعدة البيانات
+const db = new Database(dbPath);
+
+// إنشاء جدول المستخدمين إذا لم يكن موجودًا
+db.prepare(`
+  CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT UNIQUE,
+    password TEXT
+  )
+`).run();
+
+module.exports = db;
