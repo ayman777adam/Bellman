@@ -2,7 +2,7 @@ require("dotenv").config(); // تحميل ملف .env أول شيء في الت�
 
 const express = require("express");
 const app = express();
-const db = require("./config/database");
+const db = require("./config/db");
 
 // --- (الإضافة الجديدة) ---
 // 1. استدعاء مكتبة cors
