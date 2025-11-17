@@ -1,5 +1,4 @@
 require("dotenv").config();
-// --- تم حذف body-parser ---
 const express = require("express");
 const cors = require("cors");
 const mongoose = require('mongoose'); 
