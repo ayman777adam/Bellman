@@ -1,12 +1,10 @@
 // controllers/authController.js
-
 require("dotenv").config();
-//   !! استدعاء النموذج الصحيح !!
-const User = require("../models/userModel"); // <-- تم التعديل ليطابق اسم ملفك
+const User = require("../models/userModel"); // <-- استدعاء النموذج الصحيح
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
-// --- تم حذف require("../config/db") ---
+// --- لا يوجد أي require لـ config/db هنا ---
 
 // تسجيل مستخدم جديد (نسخة Mongoose)
 exports.register = async (req, res) => {
@@ -16,13 +14,11 @@ exports.register = async (req, res) => {
     if (existing) return res.status(400).json({ message: "User already exists" });
 
     const hashed = await bcrypt.hash(password, 10);
-
     const newUser = new User({
       username: username,
       password: hashed,
     });
     await newUser.save();
-
     return res.json({ message: "User created successfully" });
   } catch (err) {
     return res.status(500).json({ message: "Server error", error: err.message });
@@ -40,7 +36,6 @@ exports.login = async (req, res) => {
     if (!match) return res.status(400).json({ message: "Invalid credentials" });
 
     const token = jwt.sign({ id: user._id, username: user.username }, process.env.JWT_SECRET, { expiresIn: "1d" });
-
     return res.json({ token });
   } catch (err) {
     return res.status(500).json({ message: "Server error", error: err.message });
