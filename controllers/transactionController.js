@@ -1,21 +1,20 @@
 // controllers/transactionController.js
 
-const Box = require('../models/Box'); // نموذج الصندوق
-const Transaction = require('../models/Transaction'); // نموذج المعاملات
+const Box = require('../models/Box'); 
+const Transaction = require('../models/Transaction'); 
 
 // دالة تسجيل معاملة جديدة
 exports.recordTransaction = async (req, res) => {
-    // نتوقع boxId, amount, type, description في الـ body
     const { boxId, amount, type, description } = req.body; 
     
-    // تحقق أولي من وجود البيانات الأساسية
+    // التحقق من وجود البيانات الأساسية
     if (!boxId || !amount || !type) {
         return res.status(400).json({ message: "Missing required fields (boxId, amount, type)." });
     }
     
-    // التحقق من نوع المعاملة
-    if (type !== 'deposit' && type !== 'withdrawal') {
-         return res.status(400).json({ message: "Invalid transaction type. Must be 'deposit' or 'withdrawal'." });
+    // التحقق من نوع المعاملة (الآن يجب أن يكون 'deposit' فقط)
+    if (type !== 'deposit') {
+         return res.status(400).json({ message: "Invalid transaction type. Must be 'deposit'." });
     }
 
     try {
@@ -25,20 +24,9 @@ exports.recordTransaction = async (req, res) => {
             return res.status(404).json({ message: "Box not found." });
         }
 
-        // 2. حساب الرصيد الجديد والتحقق من السحب
+        // 2. حساب الرصيد الجديد (يركز على الإضافة فقط)
         let newBalance = box.balance;
-        
-        if (type === 'deposit') {
-            // إضافة المبلغ
-            newBalance += amount;
-        } else if (type === 'withdrawal') {
-            // التحقق من وجود رصيد كافٍ قبل السحب
-            if (box.balance < amount) {
-                return res.status(400).json({ message: "Insufficient funds for withdrawal." });
-            }
-            // سحب المبلغ
-            newBalance -= amount;
-        }
+        newBalance += amount; // نقوم دائماً بالإضافة (deposit)
 
         // 3. حفظ سجل المعاملة أولاً
         const newTransaction = new Transaction({
@@ -60,7 +48,6 @@ exports.recordTransaction = async (req, res) => {
         });
 
     } catch (error) {
-        // خطأ عام (في الاتصال أو المونجوز)
         return res.status(500).json({ 
             message: "Failed to record transaction.", 
             error: error.message 

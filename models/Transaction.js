@@ -3,34 +3,26 @@
 const mongoose = require('mongoose');
 
 const TransactionSchema = new mongoose.Schema({
-  // ربط المعاملة بالصندوق الذي حدثت فيه
   box: { 
     type: mongoose.Schema.Types.ObjectId, 
     ref: 'Box', 
     required: true 
   },
-
-  // المبلغ
   amount: {
     type: Number,
     required: true
   },
-
-  // نوع الحركة: 'deposit' (إيداع/بيع) أو 'withdrawal' (سحب/شراء)
+  // نوع الحركة: 'deposit' فقط
   type: {
     type: String,
-    enum: ['deposit', 'withdrawal'],
+    enum: ['deposit'], // <-- تم حذف 'withdrawal'
     required: true
   },
-  
-  // سبب المعاملة
   description: {
     type: String,
     trim: true,
     default: 'No description'
   },
-
-  // تاريخ ووقت المعاملة
   createdAt: { 
     type: Date, 
     default: Date.now 
