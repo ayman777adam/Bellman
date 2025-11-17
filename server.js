@@ -14,6 +14,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // مسار تسجيل الدخول وإنشاء الحساب
 app.use("/api/auth", require("./routes/auth"));
+app.use("/api/box", require("./routes/box")); // <-- السطر المضاف لتسجيل مسار الصندوق
 
 app.get("/", (req, res) => {
   res.send("CashBox Secure Backend Running");
@@ -31,4 +32,3 @@ mongoose.connect(MONGO_URI)
     console.error('Failed to connect to MongoDB', err);
     process.exit(1);
   });
-// --- أزل أي سطر تعليق قمت بإضافته سابقاً (مثل // Final check for body parser fix) ---
