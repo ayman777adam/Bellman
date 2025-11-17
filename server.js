@@ -1,4 +1,5 @@
 require("dotenv").config();
+const bodyParser = require('body-parser');
 const express = require("express");
 const cors = require("cors");
 const mongoose = require('mongoose'); // أضفنا Mongoose هنا
@@ -13,7 +14,8 @@ const MONGO_URI = process.env.MONGO_URI;
 const PORT = process.env.PORT || 5000;
 
 app.use(cors());
-app.use(express.json());
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 
 // مسار تسجيل الدخول وإنشاء الحساب
 app.use("/api/auth", require("./routes/auth"));
