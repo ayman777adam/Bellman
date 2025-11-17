@@ -9,11 +9,8 @@ const MONGO_URI = process.env.MONGO_URI;
 const PORT = process.env.PORT || 5000;
 
 app.use(cors());
-
-// --- استخدام قارئ JSON المدمج في Express ---
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-// ------------------------------------
 
 // مسار تسجيل الدخول وإنشاء الحساب
 app.use("/api/auth", require("./routes/auth"));
@@ -34,3 +31,4 @@ mongoose.connect(MONGO_URI)
     console.error('Failed to connect to MongoDB', err);
     process.exit(1);
   });
+// --- أزل أي سطر تعليق قمت بإضافته سابقاً (مثل // Final check for body parser fix) ---
