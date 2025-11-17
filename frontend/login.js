@@ -1,83 +1,89 @@
-// ------------ إعدادات أساسية -------------
-const API_URL = "https://cashbox-backend.onrender.com/api/auth";
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title data-lang="pageTitle">CashBox Secure — تسجيل الدخول</title>
 
-// عنصر الرسائل
-const toast = (msg, type = "info") => showToast(msg, type);
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 
-// ------------ تسجيل الدخول -------------
-document.getElementById("loginForm").addEventListener("submit", async (e) => {
-  e.preventDefault();
+    <link rel="stylesheet" href="style.css" />
+  </head>
 
-  const username = document.getElementById("username").value.trim();
-  const password = document.getElementById("password").value.trim();
+  <body>
+    <div class="bg-pattern"></div>
 
-  if (!username || !password) {
-    toast("الرجاء إدخال اسم المستخدم وكلمة المرور", "error");
-    return;
-  }
+    <div class="wrap">
+      <section class="hero">
+        <div class="logo">CashBox Secure</div>
+        <h1 data-lang="heroTitle">نظام آمن لتقفيل الصندوق للفنادق</h1>
+        <p data-lang="heroSubtitle">حل سريع، قابل للمراجعة، ويعمل بدون انترنت لتقفيل الصندوق.</p>
+      </section>
 
-  try {
-    const res = await fetch(`${API_URL}/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password })
-    });
+      <main>
+        <div class="card" id="card">
 
-    const data = await res.json();
+          <div class="lang-switcher">
+            <button id="langArBtn" class="lang-btn active" data-lang-set="ar">ع</button>
+            <button id="langEnBtn" class="lang-btn" data-lang-set="en">EN</button>
+          </div>
 
-    if (!res.ok) {
-      toast(data.message || "فشل تسجيل الدخول", "error");
-      return;
-    }
+          <!-- Login View -->
+          <div id="loginView" class="view-pane">
+            <div class="title" data-lang="loginTitle">مرحباً بعودتك</div>
+            <div class="muted" data-lang="loginSubtitle">سجل الدخول إلى حسابك</div>
 
-    localStorage.setItem("token", data.token);
+            <form class="form" id="loginForm">
+              <input id="username" type="text" placeholder="اسم المستخدم" />
+              <div class="password-wrapper">
+                <input id="password" type="password" placeholder="كلمة المرور" />
+              </div>
 
-    const decoded = decodeToken(data.token);
-    localStorage.setItem("lastUser", decoded.username);
+              <div class="actions">
+                <button class="btn primary" type="submit">تسجيل الدخول</button>
+                <button class="btn secondary" type="button" id="showRegisterBtn">إنشاء حساب</button>
+              </div>
 
-    toast("تم تسجيل الدخول بنجاح", "success");
+              <div id="loginMsg" class="msg" role="alert"></div>
+            </form>
+          </div>
 
-    setTimeout(() => {
-      window.location.href = "dashboard.html";
-    }, 700);
+          <!-- Register View -->
+          <div id="registerView" class="view-pane view-hidden">
+            <div class="title">إنشاء حساب جديد</div>
+            <div class="muted">اختر اسم مستخدم وكلمة مرور</div>
 
-  } catch (err) {
-    console.error(err);
-    toast("خطأ في الاتصال بالسيرفر", "error");
-  }
-});
+            <form class="form" id="registerForm">
+              <input id="regUsername" type="text" placeholder="اسم المستخدم" />
+              <div class="password-wrapper">
+                <input id="regPassword" type="password" placeholder="كلمة المرور" />
+              </div>
 
-// ------------ إنشاء حساب -------------
-document.getElementById("registerForm").addEventListener("submit", async (e) => {
-  e.preventDefault();
+              <div class="actions">
+                <button class="btn primary" type="submit">إنشاء الحساب</button>
+                <button class="btn secondary" type="button" id="showLoginBtn">العودة لتسجيل الدخول</button>
+              </div>
 
-  const username = document.getElementById("regUsername").value.trim();
-  const password = document.getElementById("regPassword").value.trim();
+              <div id="regMsg" class="msg" role="alert"></div>
+            </form>
+          </div>
 
-  if (!username || !password) {
-    toast("الرجاء إدخال البيانات كاملة", "error");
-    return;
-  }
+        </div>
+      </main>
+    </div>
 
-  try {
-    const res = await fetch(`${API_URL}/register`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password })
-    });
+    <!-- ترتيب السكربتات الصحيح -->
 
-    const data = await res.json();
+    <!-- 1) أدوات النظام: decodeToken + showToast -->
+    <script src="utils.js"></script>
 
-    if (!res.ok) {
-      toast(data.message || "فشل إنشاء الحساب", "error");
-      return;
-    }
+    <!-- 2) الإعدادات وتحديد الـ API URL + دالة apiRequest -->
+    <script src="frontend/config.js"></script>
 
-    toast("تم إنشاء الحساب بنجاح، الآن يمكنك تسجيل الدخول", "success");
+    <!-- 3) سكربت صفحة تسجيل الدخول فقط -->
+    <script src="login.js"></script>
 
-    document.getElementById("showLoginBtn").click();
-  } catch (err) {
-    console.error(err);
-    toast("خطأ في الاتصال بالسيرفر", "error");
-  }
-});
+  </body>
+</html>
