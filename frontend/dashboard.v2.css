@@ -321,3 +321,33 @@ td[contenteditable="true"]:focus {
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); }
 ::-webkit-scrollbar-thumb { background: var(--bg-panel); border-radius: 3px; }
+/* ======================================
+   FIX: Cash Calculator - No Scrollbars
+   ====================================== */
+
+/* حاوية الجدول بدون أي تمرير */
+.cash-table-container {
+    overflow: visible !important;      /* يمنع ظهور أي Scroll */
+}
+
+/* إجبار الجدول يأخذ عرض الكرت كامل */
+#cashCalcTable {
+    width: 100% !important;
+    table-layout: fixed !important;     /* توزيع الأعمدة بالتساوي */
+    border-collapse: collapse;
+}
+
+/* الأعمدة الثلاثة: عدد — فئة — مجموع */
+#cashCalcTable th,
+#cashCalcTable td {
+    width: 33.33% !important;          /* ثلاث أعمدة متساوية */
+    padding: 10px !important;
+    text-align: center !important;
+    white-space: nowrap !important;     /* منع انكسار النص */
+}
+
+/* التأكد أن الحقول لا تنضغط */
+.cash-input {
+    width: 100% !important;             /* يأخذ عرض العمود بالكامل */
+    min-width: 60px !important;         /* يحافظ على الحجم */
+}
