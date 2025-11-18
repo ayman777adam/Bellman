@@ -16,7 +16,13 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/api/auth", require("./routes/auth"));
 app.use("/api/box", require("./routes/box")); 
 app.use("/api/transaction", require("./routes/transaction")); // <-- السطر المضاف لتسجيل مسار المعاملات
+// ... داخل ملف server.js
+app.use("/api/transaction", require("./routes/transaction")); 
+// 🔥 إضافة المسار الجديد لتقارير الإغلاق 🔥
+app.use("/api/closure", require("./routes/closure")); // <-- السطر المُضاف
 
+app.get("/", (req, res) => {
+// ... باقي الكود
 app.get("/", (req, res) => {
   res.send("CashBox Secure Backend Running");
 });
