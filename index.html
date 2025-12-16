@@ -1,0 +1,1976 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Bellman System</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0f172a">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Tajawal', 'sans-serif'] },
+                    colors: {
+                        gold: { 400: '#fbbf24', 500: '#f59e0b', 600: '#d97706' },
+                        dark: { bg: '#0f172a', surface: '#1e293b' }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { -webkit-tap-highlight-color: transparent; user-select: none; }
+        input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        
+        .fab-container { position: fixed; bottom: 100px; left: 20px; z-index: 90; touch-action: none; transition: transform 0.3s; }
+        html[dir="ltr"] .fab-container { left: auto; right: 20px; }
+        .fab-container.hidden-fab { transform: scale(0); pointer-events: none; }
+        .fab-sub-btn { position: absolute; width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; box-shadow: 0 4px 10px rgba(0,0,0,0.3); transition: all 0.3s; opacity: 0; transform: scale(0); z-index: -1; }
+        .fab-container.active .btn-in { top: -70px; left: 0; opacity: 1; transform: scale(1); }
+        .fab-container.active .btn-out { top: 0; left: 70px; opacity: 1; transform: scale(1); }
+        .main-fab { width: 65px; height: 65px; background: #f59e0b; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; color: white; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.5); transition: transform 0.3s; }
+        .fab-container.active .main-fab { transform: rotate(45deg); background: #ef4444; }
+
+        /* Feedback Toast */
+        #feedbackToast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 16px 24px;
+            border-radius: 12px;
+            font-weight: bold;
+            z-index: 1000;
+            opacity: 0;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 200px;
+            text-align: center;
+        }
+        #feedbackToast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+        #feedbackToast.success { 
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.95), rgba(22, 163, 74, 0.95));
+            border-left: 4px solid #22c55e;
+        }
+        #feedbackToast.error { 
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.95), rgba(220, 38, 38, 0.95));
+            border-left: 4px solid #ef4444;
+        }
+        #feedbackToast.info { 
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.95), rgba(37, 99, 235, 0.95));
+            border-left: 4px solid #3b82f6;
+        }
+        #feedbackToast i {
+            font-size: 20px;
+        }
+        
+        /* Animation */
+        @keyframes pop-in {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        .animate-pop-in { animation: pop-in 0.3s ease; }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+        .animate-shake { animation: shake 0.4s ease; }
+        
+        /* Pulsing Red Alert for Quick Checkout Buttons */
+        @keyframes pulse-red {
+            0%, 100% { 
+                background-color: rgba(239, 68, 68, 0.2);
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+            }
+            50% { 
+                background-color: rgba(239, 68, 68, 0.4);
+                box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+            }
+        }
+        .checkout-pulse-alert {
+            animation: pulse-red 1.5s ease-in-out infinite !important;
+            border: 2px solid #ef4444 !important;
+            transform: scale(1.05);
+        }
+        
+        /* Adults Counter Warning */
+        .adults-counter-error {
+            border: 2px solid #ef4444 !important;
+            background-color: rgba(239, 68, 68, 0.1) !important;
+            animation: glow-red 1.5s ease-in-out infinite;
+        }
+        .adults-counter-error .font-bold {
+            color: #ef4444 !important;
+        }
+        
+        /* Required Field Warning */
+        @keyframes glow-red {
+            0%, 100% { 
+                box-shadow: 0 0 5px rgba(239, 68, 68, 0.5),
+                            inset 0 0 5px rgba(239, 68, 68, 0.2);
+            }
+            50% { 
+                box-shadow: 0 0 20px rgba(239, 68, 68, 0.8),
+                            inset 0 0 10px rgba(239, 68, 68, 0.4);
+            }
+        }
+        .field-required-error {
+            border: 2px solid #ef4444 !important;
+            background-color: rgba(239, 68, 68, 0.1) !important;
+            animation: glow-red 1.5s ease-in-out infinite;
+        }
+        .field-required-error:focus {
+            border-color: #ef4444 !important;
+            outline: none !important;
+            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.3) !important;
+        }
+        
+        /* Room Active Warning */
+        .room-active-warning {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(220, 38, 38, 0.15));
+            border: 1px solid #ef4444;
+            border-radius: 8px;
+            padding: 8px 12px;
+            margin-top: 4px;
+            font-size: 12px;
+            color: #dc2626;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            animation: slideDown 0.3s ease;
+        }
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .room-active-warning i {
+            font-size: 14px;
+        }
+
+        @media print {
+            body { background-color: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; margin: 0; padding: 0; direction: rtl !important; color: black !important; }
+            #mainApp, #loginScreen, .fab-container, .no-print, #confirmModal, #closeOptionsModal, #historyModal, #receptionModal, #langMenu { display: none !important; }
+            #printArea, #printHistoryArea { display: block !important; width: 100%; padding: 10px; box-sizing: border-box; }
+            /* Hide printArea when printing history report */
+            #printHistoryArea:not(.hidden) ~ #printArea,
+            body:has(#printHistoryArea:not(.hidden)) #printArea { display: none !important; }
+            * { color: #000000 !important; text-shadow: none !important; box-shadow: none !important; }
+            table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 10px; }
+            th { background-color: #f3f4f6 !important; padding: 5px; border: 1px solid #000; font-weight: bold; text-align: center; }
+            td { padding: 4px; border: 1px solid #000; vertical-align: middle; text-align: center; }
+            .print-header-info { border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; font-weight: bold; font-size: 12px; }
+            #devSignature { display: block !important; position: fixed; bottom: 5px; width: 100%; text-align: center; font-size: 8px; color: #666; }
+            /* تقرير التاريخ - صفوف ضيقة */
+            #printHistoryArea .text-center { border-bottom: 1px solid #ccc; padding-bottom: 10px; margin-bottom: 10px; }
+            #printHistoryArea table { font-size: 9px !important; }
+            #printHistoryArea th { padding: 3px !important; font-size: 9px !important; }
+            #printHistoryArea td { padding: 2px !important; font-size: 8px !important; }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 dark:bg-dark-bg text-gray-800 dark:text-gray-100 h-[100dvh] flex flex-col overflow-hidden transition-colors duration-300">
+
+    <div id="loginScreen" class="fixed inset-0 z-[200] bg-gray-50 dark:bg-dark-bg flex flex-col items-center justify-center p-6 text-gray-800 dark:text-white transition-colors duration-300">
+        <div class="absolute top-6 rtl:right-6 ltr:left-6 flex gap-2 z-50">
+            <div class="relative">
+                <button onclick="document.getElementById('loginLangMenu').classList.toggle('hidden')" class="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+                    <i class="fas fa-globe text-xl text-blue-500"></i>
+                </button>
+                <div id="loginLangMenu" class="hidden absolute top-12 rtl:right-0 ltr:left-0 bg-white dark:bg-dark-surface shadow-xl rounded-xl border border-gray-200 dark:border-gray-700 w-40 overflow-hidden z-50">
+                    <button onclick="window.sys.setLang('ar')" class="block w-full text-start px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-700 font-bold border-b dark:border-gray-700">🇸🇦 العربية</button>
+                    <button onclick="window.sys.setLang('en')" class="block w-full text-start px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-700 font-bold border-b dark:border-gray-700">🇺🇸 English</button>
+                    <button onclick="window.sys.setLang('hi')" class="block w-full text-start px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-700 font-bold border-b dark:border-gray-700">🇮🇳 हिन्दी</button>
+                    <button onclick="window.sys.setLang('bn')" class="block w-full text-start px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-700 font-bold">🇧🇩 বাংলা</button>
+                </div>
+            </div>
+            <button onclick="window.sys.toggleTheme()" class="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center transition-transform hover:rotate-12">
+                <i id="loginThemeIcon" class="fas fa-moon text-xl"></i>
+            </button>
+        </div>
+        
+        <div class="mb-6 p-6 rounded-full border-4 border-gold-500 shadow-[0_0_40px_rgba(245,158,11,0.4)]">
+            <i class="fas fa-gem text-5xl text-gold-500"></i>
+        </div>
+        <h1 class="text-4xl font-bold mb-8" data-i18n="app_title">BELLMAN</h1>
+        
+        <div class="w-full max-w-xs space-y-3">
+            <input type="text" id="loginName" class="w-full p-4 text-center rounded-xl bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 focus:border-gold-500 outline-none text-lg dark:text-white" data-placeholder="ph_bellman_name" placeholder="اسم البيلمان">
+            
+            <div class="flex gap-2">
+                <input type="number" id="loginBranch" class="w-1/2 p-4 text-center rounded-xl bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 focus:border-gold-500 outline-none text-lg dark:text-white" data-placeholder="ph_branch_code" placeholder="كود الفرع">
+                <input type="password" id="loginPass" class="w-1/2 p-4 text-center rounded-xl bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 focus:border-gold-500 outline-none text-lg dark:text-white" data-placeholder="ph_pin" placeholder="الرقم السري">
+            </div>
+
+            <button onclick="window.sys.openReceptionModal()" class="w-full bg-gray-800 dark:bg-gray-700 hover:bg-gray-700 dark:hover:bg-gray-600 text-white font-bold p-3 rounded-xl text-sm transition-all flex items-center justify-center gap-2 border border-gray-600 dark:border-gray-600" data-i18n="btn_manage_reception">
+                <i class="fas fa-users-cog"></i> <span>إدارة موظفي الاستقبال</span>
+            </button>
+            <button id="btnLogin" class="mt-3 w-full bg-gold-500 text-black font-bold p-4 rounded-xl text-lg hover:bg-gold-400 transition-all" data-i18n="btn_login">تسجيل الدخول</button>
+            <p id="loginError" class="text-red-500 text-center text-sm font-bold hidden"></p>
+        </div>
+    </div>
+
+    <div id="mainApp" class="hidden flex-col h-full relative">
+        <header class="bg-white dark:bg-dark-surface p-4 shadow-md z-30">
+            <div class="flex justify-between items-center mb-2">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-gold-500 rounded-lg flex items-center justify-center text-white font-bold"><i class="fas fa-user-shield"></i></div>
+                    <div>
+                        <h2 id="headerName" class="font-bold text-lg">...</h2>
+                        <div id="headerBranch" class="text-xs text-gray-400 font-bold">...</div>
+                    </div>
+                </div>
+                
+                <div class="flex gap-2">
+                    <button onclick="window.sys.openHistoryModal()" class="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 text-purple-500 flex items-center justify-center hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors">
+                        <i class="fas fa-history text-xl"></i>
+                    </button>
+                    <button onclick="window.sys.openReceptionModal()" class="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 text-blue-500 flex items-center justify-center hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
+                        <i class="fas fa-users text-xl"></i>
+                    </button>
+                    <div id="connectionStatus" class="w-3 h-3 rounded-full bg-red-500 animate-pulse" title="حالة الاتصال"></div>
+                    <button onclick="window.sys.logout()" class="w-10 h-10 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <div class="flex border-b dark:border-gray-800 bg-white dark:bg-dark-surface z-20 shadow-sm">
+            <div class="flex-1 p-2 text-center border-l dark:border-gray-800">
+                <span class="text-[10px] text-gray-500 block">دخول اليوم</span>
+                <span id="statIn" class="text-green-500 font-bold text-lg">0</span>
+            </div>
+            <div class="flex-1 p-2 text-center border-l dark:border-gray-800">
+                <span class="text-[10px] text-gray-500 block">خروج اليوم</span>
+                <span id="statOut" class="text-red-500 font-bold text-lg">0</span>
+            </div>
+        </div>
+        
+        <!-- Branch selector removed - each user can only access their own branch -->
+
+        <main class="flex-1 overflow-y-auto p-3 pb-8 space-y-2 bg-gray-100 dark:bg-dark-bg">
+            <div id="loader" class="text-center mt-10 hidden"><i class="fas fa-circle-notch fa-spin text-gold-500 text-3xl"></i></div>
+            
+            <div id="sectionActive" class="hidden">
+                <div class="flex items-center gap-2 mb-2 px-1">
+                    <div class="w-2 h-2 rounded-full bg-green-500"></div>
+                    <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider">الغرف الساكنة (Active)</h3>
+                </div>
+                <div id="listActive" class="space-y-3"></div>
+            </div>
+
+
+            <div id="emptyState" class="hidden text-center mt-20 opacity-30">
+                <i class="fas fa-clipboard text-6xl"></i>
+                <p class="mt-2">لا توجد حركات</p>
+            </div>
+        </main>
+
+        <footer class="bg-white dark:bg-dark-surface p-4 border-t dark:border-gray-800 z-40">
+            <button onclick="window.sys.closeShift()" class="w-full bg-red-600 dark:bg-red-700 hover:bg-red-700 dark:hover:bg-red-600 text-white p-4 rounded-xl font-bold shadow-lg flex items-center justify-center gap-2 active:scale-95 transition-all">
+                <i class="fas fa-door-open text-white"></i>
+                <span>إغلاق الشفت</span>
+            </button>
+        </footer>
+
+        <div class="fab-container" id="fabContainer">
+            <button onclick="window.sys.openEntryModal()" class="fab-sub-btn btn-in bg-green-600"><i class="fas fa-sign-in-alt"></i></button>
+            <button onclick="window.sys.openCheckoutModal()" class="fab-sub-btn btn-out bg-red-600"><i class="fas fa-sign-out-alt"></i></button>
+            <button onclick="window.sys.toggleFab()" class="main-fab" id="dragBtn"><i class="fas fa-plus"></i></button>
+        </div>
+    </div>
+
+    <div id="printArea" class="hidden">
+        <div class="text-center">
+            <h1 style="font-size: 20px; font-weight: bold;">تقرير بيلمان (Bellman)</h1>
+        </div>
+        <div class="print-header-info">
+            <span>الموظف: <span id="printBellman"></span></span>
+            <span>الفرع: <span id="printBranch"></span></span>
+            <span>التاريخ: <span id="printDate"></span></span>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th width="10%">الغرفة</th>
+                    <th width="15%">دخول</th>
+                    <th width="15%">خروج</th>
+                    <th width="15%">استقبال</th>
+                    <th width="15%">تفاصيل</th>
+                    <th width="30%">ملاحظات</th>
+                </tr>
+            </thead>
+            <tbody id="printTableBody"></tbody>
+        </table>
+    </div>
+
+    <div id="receptionModal" class="fixed inset-0 z-[250] hidden flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="document.getElementById('receptionModal').classList.add('hidden')"></div>
+        <div class="bg-white dark:bg-dark-surface w-full max-w-sm rounded-3xl p-6 relative z-10 animate-pop-in">
+            <h3 class="text-xl font-bold text-center mb-4 dark:text-blue-400" data-i18n="reception_modal_title">إدارة موظفي الاستقبال</h3>
+            <div class="flex gap-2 mb-4">
+                <input type="text" id="receptionInput" onkeydown="if(event.key === 'Enter') window.sys.addReception()" class="flex-1 p-3 bg-gray-100 dark:bg-slate-700 dark:text-white rounded-xl font-bold text-center text-sm" data-placeholder="reception_add_placeholder" placeholder="اسم الموظف">
+                <button onclick="window.sys.addReception()" class="bg-blue-500 text-white px-4 py-3 rounded-xl font-bold active:scale-95 transition-all"><i class="fas fa-plus"></i></button>
+            </div>
+            <div id="receptionList" class="flex flex-wrap gap-2 justify-center min-h-[50px] max-h-[300px] overflow-y-auto mb-4 p-2 bg-gray-50 dark:bg-slate-800 rounded-xl">
+                <p class="text-center text-gray-400 text-sm w-full">لا توجد أسماء محفوظة</p>
+            </div>
+            <button onclick="document.getElementById('receptionModal').classList.add('hidden')" class="w-full bg-gray-700 dark:bg-gray-600 text-white py-3 rounded-xl font-bold active:scale-95 transition-all" data-i18n="btn_close">إغلاق</button>
+        </div>
+    </div>
+
+    <div id="historyModal" class="fixed inset-0 z-[260] hidden flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="document.getElementById('historyModal').classList.add('hidden')"></div>
+        <div class="bg-white dark:bg-dark-surface w-full max-w-md rounded-3xl p-6 relative z-10 animate-pop-in flex flex-col max-h-[85vh]">
+            <h3 class="text-xl font-bold text-center mb-4 dark:text-purple-400" data-i18n="history_modal_title">سجل التاريخ (الأرشيف)</h3>
+            <div class="flex gap-2 mb-4">
+                <input type="date" id="historyDate" class="flex-1 p-3 bg-gray-100 dark:bg-slate-700 dark:text-white rounded-xl font-bold text-center text-sm">
+                <button onclick="window.sys.fetchHistory()" class="bg-purple-500 text-white px-5 py-3 rounded-xl font-bold active:scale-95 transition-all" data-i18n="btn_search"><i class="fas fa-search"></i> <span>بحث</span></button>
+            </div>
+            <div id="historyList" class="flex-1 overflow-y-auto space-y-2 min-h-[200px] border-t border-gray-200 dark:border-gray-700 pt-2">
+                <p class="text-center text-gray-400 mt-10 text-sm" data-i18n="history_select_date">اختر التاريخ لعرض السجل</p>
+            </div>
+            <div class="flex gap-2 mt-4">
+                <button onclick="window.sys.printHistoryReport()" class="flex-1 bg-purple-500 text-white py-3 rounded-xl font-bold active:scale-95 transition-all flex items-center justify-center gap-2" data-i18n="btn_print_history">
+                    <i class="fas fa-print"></i> <span>طباعة التقرير</span>
+                </button>
+                <button onclick="document.getElementById('historyModal').classList.add('hidden')" class="flex-1 bg-gray-700 dark:bg-gray-600 text-white py-3 rounded-xl font-bold active:scale-95 transition-all" data-i18n="btn_close">إغلاق</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="printHistoryArea" class="hidden">
+        <div class="text-center" style="margin-bottom: 15px;">
+            <h1 style="font-size: 18px; font-weight: bold; margin-bottom: 8px;">تقرير حامل الحقائب</h1>
+            <div style="font-size: 11px; color: #333;">
+                <span>التاريخ: <span id="printHistoryDate"></span></span>
+                <span style="margin: 0 15px;">|</span>
+                <span>الفرع: <span id="printHistoryBranch"></span></span>
+                <span style="margin: 0 15px;">|</span>
+                <span>البيلمان: <span id="printHistoryBellman"></span></span>
+            </div>
+        </div>
+        <table style="font-size: 9px;">
+            <thead>
+                <tr>
+                    <th width="8%">الغرفة</th>
+                    <th width="18%">دخول</th>
+                    <th width="18%">خروج</th>
+                    <th width="14%">الاستقبال</th>
+                    <th width="10%">بالغين</th>
+                    <th width="8%">أطفال</th>
+                    <th width="24%">ملاحظات</th>
+                </tr>
+            </thead>
+            <tbody id="printHistoryTableBody"></tbody>
+        </table>
+        <div style="margin-top: 20px; text-align: center; font-size: 8px; color: #666; font-weight: normal;">
+            تنفيذ: أيمن أبو وردة - 77aayy@gmail.com - 0570707121
+        </div>
+    </div>
+
+    <div id="confirmModal" class="fixed inset-0 z-[200] hidden flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="document.getElementById('confirmModal').classList.add('hidden')"></div>
+        <div class="bg-white dark:bg-dark-surface w-full max-w-sm rounded-3xl p-6 relative z-10 border-2 border-gold-500/30 dark:border-gold-500/50 shadow-2xl animate-pop-in">
+            <div class="flex items-center justify-center mb-4">
+                <div class="w-16 h-16 rounded-full bg-gold-500/10 dark:bg-gold-500/20 flex items-center justify-center">
+                    <i class="fas fa-exclamation-triangle text-3xl text-gold-500"></i>
+                </div>
+            </div>
+            <h3 class="text-xl font-bold text-gray-800 dark:text-white mb-3 text-center" id="confirmTitle"></h3>
+            <p class="text-gray-600 dark:text-gray-300 text-sm text-center mb-6 leading-relaxed" id="confirmMsg"></p>
+            <div class="flex gap-3" id="modalButtons"></div>
+        </div>
+    </div>
+
+    <div id="feedbackToast" class="hidden">
+        <i class="fas fa-check-circle"></i>
+        <span id="feedbackToastText"></span>
+    </div>
+
+    <div id="entryModal" class="fixed inset-0 z-[60] hidden">
+        <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="window.sys.closeModals()"></div>
+        <div class="absolute bottom-0 w-full bg-gray-100 dark:bg-dark-surface rounded-t-3xl p-6 transition-transform">
+            <h3 class="text-xl font-bold mb-4 text-green-600">تسجيل دخول جديد</h3>
+            <div class="space-y-3">
+                <div class="flex gap-2">
+                    <div class="flex-1">
+                        <input type="number" id="inRoom" class="w-full p-4 rounded-xl text-center text-xl font-bold bg-white dark:bg-dark-bg border dark:border-gray-700 outline-none" placeholder="رقم الغرفة" oninput="window.sys.checkRoomActive(this.value)">
+                        <div id="roomActiveWarning" class="room-active-warning hidden">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <span id="roomActiveWarningText"></span>
+                        </div>
+                    </div>
+                    <input type="time" id="inTime" class="w-32 p-4 rounded-xl text-center font-bold bg-white dark:bg-dark-bg border dark:border-gray-700">
+                </div>
+                <div class="mb-2">
+                    <div id="inRecButtons" class="flex flex-wrap gap-2 mb-2 min-h-[40px]"></div>
+                    <input type="text" id="inRec" class="w-full p-4 rounded-xl bg-white dark:bg-dark-bg border dark:border-gray-700 outline-none font-bold" placeholder="اسم موظف الاستقبال (إجباري)">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="bg-white dark:bg-dark-bg p-2 rounded-xl border dark:border-gray-700 flex justify-between items-center">
+                        <span class="text-xs font-bold text-gray-500 flex items-center gap-1">
+                            <i class="fas fa-user text-blue-500"></i>
+                            <span>بالغين</span>
+                        </span>
+                        <div class="flex items-center gap-2">
+                            <button onclick="window.sys.adj('valAdl', -1)" class="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded font-bold">-</button>
+                            <span id="valAdl" class="font-bold">0</span>
+                            <button onclick="window.sys.adj('valAdl', 1)" class="w-8 h-8 bg-gold-500 text-white rounded font-bold">+</button>
+                        </div>
+                    </div>
+                    <div class="bg-white dark:bg-dark-bg p-2 rounded-xl border dark:border-gray-700 flex justify-between items-center">
+                        <span class="text-xs font-bold text-gray-500 flex items-center gap-1">
+                            <i class="fas fa-baby text-pink-500"></i>
+                            <span>أطفال</span>
+                        </span>
+                        <div class="flex items-center gap-2">
+                            <button onclick="window.sys.adj('valChd', -1)" class="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded font-bold">-</button>
+                            <span id="valChd" class="font-bold">0</span>
+                            <button onclick="window.sys.adj('valChd', 1)" class="w-8 h-8 bg-gold-500 text-white rounded font-bold">+</button>
+                        </div>
+                    </div>
+                </div>
+                <textarea id="inNotes" rows="2" class="w-full p-3 rounded-xl bg-white dark:bg-dark-bg border dark:border-gray-700 outline-none text-sm" placeholder="ملاحظات الدخول"></textarea>
+                <button onclick="window.sys.validateEntry()" class="w-full bg-green-600 text-white p-3 rounded-xl font-bold shadow-lg text-lg mt-2">حفظ</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="outModal" class="fixed inset-0 z-[60] hidden">
+        <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="window.sys.closeModals()"></div>
+        <div class="absolute bottom-0 w-full bg-gray-100 dark:bg-dark-surface rounded-t-3xl p-6">
+            <h3 class="text-xl font-bold mb-4 text-red-600">تسجيل خروج</h3>
+            <div class="flex gap-2 mb-4">
+                <input type="number" id="outRoomManual" class="flex-1 p-4 rounded-xl text-center text-xl font-bold bg-white dark:bg-dark-bg border-2 border-red-500/30 focus:border-red-500 outline-none" placeholder="رقم الغرفة">
+                <input type="time" id="outTimeManual" class="w-32 p-4 rounded-xl text-center font-bold bg-white dark:bg-dark-bg border dark:border-gray-700">
+            </div>
+            <div class="mb-4">
+                <div id="outRecButtons" class="flex flex-wrap gap-2 mb-2 min-h-[40px]"></div>
+                <input type="text" id="outRec" class="w-full p-4 rounded-xl bg-white dark:bg-dark-bg border dark:border-gray-700 outline-none font-bold" placeholder="اسم موظف الاستقبال (إجباري)">
+            </div>
+            <textarea id="outNotes" rows="2" class="w-full p-3 mb-4 rounded-xl bg-white dark:bg-dark-bg border dark:border-gray-700 outline-none text-sm" placeholder="ملاحظات الخروج"></textarea>
+            <div class="mb-4">
+                <span class="text-xs font-bold text-gray-400 mb-2 block">غرف نشطة (اضغط للاختيار):</span>
+                <div id="activeSuggestions" class="flex gap-2 overflow-x-auto pb-2 min-h-[50px]"></div>
+            </div>
+            <button onclick="window.sys.validateCheckout()" class="w-full bg-red-600 text-white p-3 rounded-xl font-bold shadow-lg text-lg">تأكيد الخروج</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { initializeFirestore, persistentLocalCache, collection, addDoc, query, where, onSnapshot, orderBy, updateDoc, doc, serverTimestamp, getDocs, deleteDoc } 
+        from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        // I18N TRANSLATIONS
+        const i18n = {
+            ar: {
+                app_title: "BELLMAN",
+                ph_bellman_name: "اسم البيلمان",
+                ph_branch_code: "كود الفرع",
+                ph_pin: "الرقم السري",
+                btn_login: "تسجيل الدخول",
+                btn_manage_reception: "إدارة موظفي الاستقبال",
+                reception_modal_title: "إدارة موظفي الاستقبال",
+                reception_add_placeholder: "اسم الموظف",
+                reception_no_names: "لا توجد أسماء محفوظة",
+                reception_duplicate: "هذا الاسم موجود بالفعل",
+                btn_close: "إغلاق",
+                history_modal_title: "سجل التاريخ (الأرشيف)",
+                btn_search: "بحث",
+                btn_print_history: "طباعة التقرير",
+                history_select_date: "اختر التاريخ لعرض السجل",
+                msg_success_entry: "تم تسجيل الدخول بنجاح",
+                msg_success_checkout: "تم تسجيل الخروج بنجاح",
+                msg_missing_rec: "يجب إدخال اسم موظف الاستقبال.",
+                msg_missing_adults: "يجب تحديد عدد البالغين (1 على الأقل).",
+                msg_missing_room: "أدخل رقم الغرفة.",
+                msg_room_busy: "تنبيه: غرفة {room} مشغولة (دخول: {time})",
+                modal_alert: "تنبيه",
+                modal_confirm: "تأكيد",
+                btn_cancel: "إلغاء",
+                btn_ok: "حسناً",
+                btn_yes: "نعم",
+                label_adults: "بالغين",
+                label_children: "أطفال",
+                label_active: "نشط",
+                label_entry: "دخول",
+                label_exit: "خروج",
+                label_transferred: "مرحل",
+                btn_quick_checkout: "خروج سريع",
+                label_today_entries: "دخول اليوم",
+                label_today_exits: "خروج اليوم",
+                label_active_rooms: "غرف نشطة",
+                title_new_entry: "تسجيل دخول جديد",
+                title_checkout: "تسجيل خروج",
+                placeholder_entry_notes: "ملاحظات الدخول",
+                placeholder_checkout_notes: "ملاحظات الخروج",
+                btn_confirm_checkout: "تأكيد الخروج",
+                msg_inactive_room_warning: "تنبيه: هذه الغرفة غير نشطة. سيتم إنشاء سجل خروج جديد.",
+                msg_inactive_room_confirm: "تنبيه: الغرفة {room} غير نشطة حالياً.\n\nسيتم إنشاء سجل خروج جديد. هل تريد المتابعة?",
+                msg_checkout_inactive_success: "تم تسجيل الخروج للغرفة غير النشطة بنجاح"
+            },
+            en: {
+                app_title: "BELLMAN",
+                ph_bellman_name: "Bellman Name",
+                ph_branch_code: "Branch Code",
+                ph_pin: "PIN",
+                btn_login: "Login",
+                btn_manage_reception: "Manage Reception Staff",
+                reception_modal_title: "Manage Reception Staff",
+                reception_add_placeholder: "Staff Name",
+                reception_no_names: "No names saved",
+                reception_duplicate: "This name already exists",
+                btn_close: "Close",
+                history_modal_title: "History Archive",
+                btn_search: "Search",
+                btn_print_history: "Print Report",
+                history_select_date: "Select date to view history",
+                msg_success_entry: "Entry saved successfully",
+                msg_success_checkout: "Checkout saved successfully",
+                msg_missing_rec: "Reception name required.",
+                msg_missing_adults: "Adults must be > 0",
+                msg_missing_room: "Enter room number.",
+                msg_room_busy: "Warning: Room {room} busy (In: {time})",
+                modal_alert: "Alert",
+                modal_confirm: "Confirm",
+                btn_cancel: "Cancel",
+                btn_yes: "Yes",
+                btn_ok: "OK",
+                label_adults: "Adults",
+                label_children: "Children",
+                label_active: "Active",
+                label_entry: "Entry",
+                label_exit: "Exit",
+                label_transferred: "Transferred",
+                btn_quick_checkout: "Quick Checkout",
+                label_today_entries: "Today's Entries",
+                label_today_exits: "Today's Exits",
+                label_active_rooms: "Active Rooms",
+                title_new_entry: "New Entry",
+                title_checkout: "Checkout",
+                placeholder_entry_notes: "Entry Notes",
+                placeholder_checkout_notes: "Checkout Notes",
+                btn_confirm_checkout: "Confirm Checkout",
+                msg_inactive_room_warning: "Warning: This room is not active. A new checkout record will be created.",
+                msg_inactive_room_confirm: "Warning: Room {room} is not currently active.\n\nA new checkout record will be created. Do you want to continue?",
+                msg_checkout_inactive_success: "Checkout for inactive room saved successfully"
+            },
+            hi: {
+                app_title: "BELLMAN",
+                ph_bellman_name: "Bellman Naam",
+                ph_branch_code: "Branch Code",
+                ph_pin: "PIN",
+                btn_login: "Login",
+                btn_manage_reception: "Reception Manage",
+                reception_modal_title: "Reception Manage",
+                reception_add_placeholder: "Staff Naam",
+                reception_no_names: "Koi naam nahi",
+                reception_duplicate: "Ye naam pehle se hai",
+                btn_close: "Band",
+                history_modal_title: "History",
+                btn_search: "Search",
+                btn_print_history: "Print",
+                history_select_date: "Date chun",
+                msg_success_entry: "Entry save ho gaya",
+                msg_success_checkout: "Checkout save ho gaya",
+                msg_missing_rec: "Reception naam chahiye.",
+                msg_missing_adults: "Adults > 0 hona chahiye",
+                msg_missing_room: "Room number likho.",
+                msg_room_busy: "Dhyan: Room {room} busy (In: {time})",
+                modal_alert: "Alert",
+                modal_confirm: "Confirm",
+                btn_cancel: "Cancel",
+                btn_yes: "Haan",
+                btn_ok: "OK",
+                label_adults: "Bade",
+                label_children: "Bacche",
+                label_active: "Aktive",
+                label_entry: "Pravesh",
+                label_exit: "Nikalna",
+                label_transferred: "Transfer",
+                btn_quick_checkout: "Jaldi Checkout",
+                label_today_entries: "Aaj ke Pravesh",
+                label_today_exits: "Aaj ke Nikalna",
+                label_active_rooms: "Aktive Kamre",
+                title_new_entry: "Naya Pravesh",
+                title_checkout: "Checkout",
+                placeholder_entry_notes: "Pravesh Notes",
+                placeholder_checkout_notes: "Checkout Notes",
+                btn_confirm_checkout: "Checkout Confirm",
+                msg_inactive_room_warning: "Dhyan: Ye kamra aktive nahi hai. Naya checkout record banega.",
+                msg_inactive_room_confirm: "Dhyan: Kamra {room} abhi aktive nahi hai.\n\nNaya checkout record banega. Aage badhna hai?",
+                msg_checkout_inactive_success: "Inaktive kamre ka checkout save ho gaya"
+            },
+            bn: {
+                app_title: "BELLMAN",
+                ph_bellman_name: "Bellman Nam",
+                ph_branch_code: "Branch Code",
+                ph_pin: "PIN",
+                btn_login: "Login",
+                btn_manage_reception: "Reception Manage",
+                reception_modal_title: "Reception Manage",
+                reception_add_placeholder: "Staff Nam",
+                reception_no_names: "Kono naam nai",
+                reception_duplicate: "Ei naam ache",
+                btn_close: "Bandho",
+                history_modal_title: "History",
+                btn_search: "Search",
+                btn_print_history: "Print",
+                history_select_date: "Date chun",
+                msg_success_entry: "Entry save hoyeche",
+                msg_success_checkout: "Checkout save hoyeche",
+                msg_missing_rec: "Reception nam lagbe.",
+                msg_missing_adults: "Adults > 0 hote hobe",
+                msg_missing_room: "Room number likhun.",
+                msg_room_busy: "Rum {room} busy (In: {time})",
+                modal_alert: "Alert",
+                modal_confirm: "Confirm",
+                btn_cancel: "Cancel",
+                btn_yes: "Ha",
+                btn_ok: "OK",
+                label_adults: "Borolok",
+                label_children: "Baccha",
+                label_active: "Aktive",
+                label_entry: "Pravesh",
+                label_exit: "Bera",
+                label_transferred: "Transfer",
+                btn_quick_checkout: "Taratari Checkout",
+                label_today_entries: "Aajker Pravesh",
+                label_today_exits: "Aajker Bera",
+                label_active_rooms: "Aktive Room",
+                title_new_entry: "Notun Pravesh",
+                title_checkout: "Checkout",
+                placeholder_entry_notes: "Pravesh Notes",
+                placeholder_checkout_notes: "Checkout Notes",
+                btn_confirm_checkout: "Checkout Confirm",
+                msg_inactive_room_warning: "Sachetan: Ei room aktive na. Notun checkout record toiri hobe.",
+                msg_inactive_room_confirm: "Sachetan: Room {room} ekhon aktive na.\n\nNotun checkout record toiri hobe. Agabe jaben?",
+                msg_checkout_inactive_success: "Inaktive room er checkout save hoyeche"
+            }
+        };
+
+        // CONFIG
+        const firebaseConfig = {
+            apiKey: "AIzaSyBofUpmnsDClGAOqtFt_v9DoBpSoDTjsOs",
+            authDomain: "balmain-1789a.firebaseapp.com",
+            projectId: "balmain-1789a",
+            storageBucket: "balmain-1789a.firebasestorage.app",
+            messagingSenderId: "552266741408",
+            appId: "1:552266741408:web:ba3d4837b66f167aabfbc5"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        
+        // ENABLE OFFLINE PERSISTENCE (using new API)
+        const db = initializeFirestore(app, {
+            localCache: persistentLocalCache()
+        });
+
+        // SYSTEM CLASS
+        class System {
+            constructor() {
+                this.data = [];
+                this.user = { name: '', branchCode: '', branchName: '', currentBranch: 'corniche' };
+                this.unsub = null;
+                this.isDark = localStorage.getItem('bellman_theme') === 'dark';
+                this.lang = localStorage.getItem('bellman_lang') || 'ar';
+                this.currentHistoryData = [];
+                this.currentHistoryDate = '';
+                this.initTheme();
+                this.initDraggable();
+                this.checkSavedSession();
+                this.applyLang(this.lang);
+                // Load reception staff for current branch after session is loaded
+                this.loadReceptionStaff();
+                const loginIcon = document.getElementById('loginThemeIcon');
+                if(loginIcon) {
+                    loginIcon.className = this.isDark ? 'fas fa-sun text-yellow-400 text-xl' : 'fas fa-moon text-gray-600 text-xl';
+                }
+            }
+            
+            setLang(lang) {
+                this.lang = lang;
+                localStorage.setItem('bellman_lang', lang);
+                this.applyLang(lang);
+                const menu = document.getElementById('loginLangMenu');
+                if(menu) menu.classList.add('hidden');
+            }
+            
+            applyLang(lang) {
+                const dir = lang === 'ar' ? 'rtl' : 'ltr';
+                document.documentElement.setAttribute('lang', lang);
+                document.documentElement.setAttribute('dir', dir);
+                document.querySelectorAll('[data-i18n]').forEach(el => {
+                    const k = el.getAttribute('data-i18n');
+                    if(i18n[lang] && i18n[lang][k]) el.innerText = i18n[lang][k];
+                });
+                document.querySelectorAll('[data-placeholder]').forEach(el => {
+                    const k = el.getAttribute('data-placeholder');
+                    if(i18n[lang] && i18n[lang][k]) el.setAttribute('placeholder', i18n[lang][k]);
+                });
+            }
+            
+            t(key) {
+                return i18n[this.lang] && i18n[this.lang][key] ? i18n[this.lang][key] : key;
+            }
+            
+            checkSavedSession() {
+                const savedUser = localStorage.getItem('bellman_user');
+                if(savedUser) {
+                    try {
+                        const userData = JSON.parse(savedUser);
+                        if(userData.name && userData.branchCode && userData.branchName) {
+                            this.user = userData;
+                            // Ensure currentBranch is set
+                            if(!this.user.currentBranch) {
+                                this.user.currentBranch = this.user.branchCode === '1' ? 'corniche' : 'andalus';
+                            }
+                            document.getElementById('loginScreen').classList.add('hidden');
+                            document.getElementById('mainApp').classList.remove('hidden');
+                            document.getElementById('mainApp').classList.add('flex');
+                            document.getElementById('headerName').innerText = this.user.name;
+                            document.getElementById('headerBranch').innerText = this.user.branchName;
+                            this.updateTabUI(this.user.currentBranch);
+                            // Load reception staff for the current branch
+                            this.loadReceptionStaff();
+                            this.startListener();
+                        }
+                    } catch(e) {
+                        localStorage.removeItem('bellman_user');
+                    }
+                }
+            }
+
+            // --- AUTH ---
+            attemptLogin() {
+                const name = document.getElementById('loginName').value.trim();
+                const code = document.getElementById('loginBranch').value.trim(); // 1 or 2
+                const pass = document.getElementById('loginPass').value.trim(); // 1234
+                const err = document.getElementById('loginError');
+
+                if(!name || !code || !pass) {
+                    this.showLoginError('الرجاء إكمال جميع البيانات'); return;
+                }
+
+                if(pass !== '1234') {
+                    this.showLoginError('الرقم السري غير صحيح'); return;
+                }
+
+                if(code === '1') {
+                    this.user.branchCode = '1';
+                    this.user.branchName = 'الكورنيش';
+                } else if(code === '2') {
+                    this.user.branchCode = '2';
+                    this.user.branchName = 'الأندلس';
+                } else {
+                    this.showLoginError('كود الفرع غير صحيح (1 أو 2 فقط)'); return;
+                }
+
+                this.user.name = name;
+                this.user.currentBranch = code === '1' ? 'corniche' : 'andalus';
+                localStorage.setItem('bellman_user', JSON.stringify(this.user));
+                
+                // Success
+                document.getElementById('loginScreen').classList.add('hidden');
+                document.getElementById('mainApp').classList.remove('hidden');
+                document.getElementById('mainApp').classList.add('flex');
+                
+                document.getElementById('headerName').innerText = name;
+                document.getElementById('headerBranch').innerText = this.user.branchName;
+                this.updateTabUI(this.user.currentBranch);
+                // Load reception staff for the current branch
+                this.loadReceptionStaff();
+
+                this.startListener();
+            }
+
+            showLoginError(msg) {
+                const el = document.getElementById('loginError');
+                el.innerText = msg;
+                el.classList.remove('hidden');
+            }
+
+            // --- FIREBASE SYNC ---
+            startListener() {
+                document.getElementById('loader').classList.remove('hidden');
+                const conn = document.getElementById('connectionStatus');
+                
+                const q = query(
+                    collection(db, "movements"),
+                    where("branch", "==", this.user.branchName),
+                    orderBy("createdAt", "desc") // requires index usually, but basic sort works on small data
+                );
+
+                this.unsub = onSnapshot(q, (snapshot) => {
+                    this.data = [];
+                    snapshot.forEach((doc) => {
+                        const data = doc.data();
+                        // Filter out deleted/archived items
+                        if(!data.deleted) {
+                            this.data.push({ id: doc.id, ...data });
+                        }
+                    });
+                    
+                    this.updateUI();
+                    document.getElementById('loader').classList.add('hidden');
+                    conn.classList.remove('bg-red-500'); conn.classList.add('bg-green-500');
+                }, (error) => {
+                    console.error("Firebase Error:", error);
+                    // Even if error (offline), data might persist if loaded before
+                    conn.classList.remove('bg-green-500'); conn.classList.add('bg-red-500');
+                });
+            }
+
+            // --- BRANCH SWITCHING ---
+            getReceptionStaffKey(branchCode = null) {
+                // Generate unique key for each branch
+                // If branchCode is provided (from login screen), use it
+                // Otherwise use the logged-in user's branch
+                let branchId;
+                if(branchCode) {
+                    branchId = branchCode;
+                } else {
+                    branchId = this.user.branchCode || this.user.currentBranch || 'corniche';
+                }
+                return `bellman_reception_staff_${branchId}`;
+            }
+            
+            loadReceptionStaff(branchCode = null) {
+                // Load reception staff for current branch or specified branch
+                const key = this.getReceptionStaffKey(branchCode);
+                this.receptionStaff = JSON.parse(localStorage.getItem(key) || '[]');
+                
+                // Migration: If old data exists and new data is empty, migrate it
+                const oldKey = 'bellman_reception_staff';
+                const oldData = localStorage.getItem(oldKey);
+                if(oldData && this.receptionStaff.length === 0) {
+                    try {
+                        const oldStaff = JSON.parse(oldData);
+                        if(Array.isArray(oldStaff) && oldStaff.length > 0) {
+                            this.receptionStaff = [...oldStaff];
+                            this.saveReceptionStaff(branchCode);
+                            // Don't delete old data immediately, let user verify first
+                        }
+                    } catch(e) {
+                        console.warn('Failed to migrate old reception staff data:', e);
+                    }
+                }
+            }
+            
+            updateTabUI(branch) {
+                // Tab UI removed - no branch switching allowed
+                // This function is kept for compatibility but does nothing
+            }
+            
+            setBranch(branch) {
+                // Security: Prevent branch switching - users can only access their assigned branch
+                // This function is disabled to ensure data isolation between branches
+                console.warn('Branch switching is not allowed. Each user can only access their assigned branch.');
+                return;
+            }
+
+            // --- UI RENDER ---
+            updateUI() {
+                // Only show active rooms (type === 'in'), hide checked-out rooms
+                const activeList = this.data.filter(i => i.type === 'in');
+                
+                // حساب الدخولات اليومية فقط (اللي تمت اليوم)
+                const today = new Date().toISOString().split('T')[0];
+                const todayIn = this.data.filter(i => {
+                    if(i.type === 'out') return false; // الخروج لا يحسب
+                    if(!i.createdAt) return true; // إذا لم يكن هناك تاريخ، نعتبره اليوم
+                    const itemDate = i.createdAt.toDate ? i.createdAt.toDate().toISOString().split('T')[0] : new Date(i.createdAt).toISOString().split('T')[0];
+                    return itemDate === today;
+                }).length;
+                
+                // حساب الخروج اليومي فقط
+                const todayOut = this.data.filter(i => {
+                    if(i.type !== 'out') return false;
+                    if(!i.updatedAt && !i.createdAt) return true;
+                    const updateDate = i.updatedAt ? (i.updatedAt.toDate ? i.updatedAt.toDate().toISOString().split('T')[0] : new Date(i.updatedAt).toISOString().split('T')[0]) : 
+                                       (i.createdAt.toDate ? i.createdAt.toDate().toISOString().split('T')[0] : new Date(i.createdAt).toISOString().split('T')[0]);
+                    return updateDate === today;
+                }).length;
+
+                document.getElementById('statIn').innerText = todayIn; 
+                document.getElementById('statOut').innerText = todayOut;
+
+                const listActive = document.getElementById('listActive');
+                if(listActive) listActive.innerHTML = '';
+
+                // Hide sections - checked-out rooms should not appear
+                const sectionActive = document.getElementById('sectionActive');
+                const emptyState = document.getElementById('emptyState');
+                if(sectionActive) sectionActive.classList.add('hidden');
+                if(emptyState) emptyState.classList.add('hidden');
+
+                if(activeList.length === 0) {
+                    if(emptyState) emptyState.classList.remove('hidden');
+                    return;
+                }
+
+                if(activeList.length > 0) {
+                    if(sectionActive) sectionActive.classList.remove('hidden');
+                    if(listActive) activeList.forEach(item => listActive.appendChild(this.createCard(item)));
+                }
+            }
+
+            createCard(item) {
+                const isOut = item.type === 'out';
+                const isTransferred = item.transferred || false; // Check if room was transferred from previous shift
+                const div = document.createElement('div');
+                let border = !isOut ? 'border-green-500' : 'border-red-500 dark:border-gray-600';
+                let bg = !isOut ? 'bg-white dark:bg-dark-surface' : 'bg-gray-100 dark:bg-dark-surface/50 grayscale';
+                
+                // Add badge for transferred rooms
+                const transferredBadge = isTransferred ? `<span class="absolute top-2 left-2 bg-orange-500 text-white text-[9px] px-2 py-0.5 rounded-full font-bold flex items-center gap-1"><i class="fas fa-exchange-alt"></i> مرحل</span>` : '';
+                const statusBadge = !isOut ? `<span class="absolute top-2 right-2 bg-green-500 text-white text-[9px] px-2 py-0.5 rounded-full font-bold flex items-center gap-1"><i class="fas fa-circle"></i> دخول</span>` : `<span class="absolute top-2 right-2 bg-red-500 text-white text-[9px] px-2 py-0.5 rounded-full font-bold flex items-center gap-1"><i class="fas fa-check-circle"></i> خروج</span>`;
+                
+                div.className = `flex flex-col p-4 rounded-xl shadow-sm border-l-4 ${border} ${bg} relative`;
+                div.style.position = 'relative';
+
+                // Add unique ID to checkout button for pulsing effect
+                const checkoutBtnId = `checkout-btn-${item.id}`;
+                const checkoutBtn = !isOut ? `<button id="${checkoutBtnId}" onclick="window.sys.quickCheckout('${item.room}', '${item.id}')" class="bg-red-100 dark:bg-red-900/30 text-red-600 px-3 py-1 rounded-lg text-xs font-bold shadow-sm hover:bg-red-200 transition-all"><i class="fas fa-sign-out-alt"></i> خروج سريع</button>` : '';
+
+                div.innerHTML = `
+                    ${transferredBadge}
+                    ${statusBadge}
+                    <div class="flex items-center justify-between mb-2 ${isTransferred ? 'mt-4' : ''}">
+                        <span class="text-2xl font-black ${isOut ? 'text-gray-500' : 'text-gray-800 dark:text-white'}">${item.room} <span class="text-xs font-normal text-gray-400 mx-1">#</span></span>
+                        <div class="flex gap-2 items-center">${checkoutBtn}<span class="text-xs bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded text-gray-600 dark:text-gray-300 font-bold"><i class="fas fa-user-tie"></i> ${item.reception || '-'}</span></div>
+                    </div>
+                    <div class="flex gap-2 text-xs font-bold text-gray-500 mb-3">
+                        <span class="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-1 rounded flex items-center gap-1"><i class="fas fa-user text-blue-500"></i> ${item.adults} <span class="text-[10px]">بالغين</span></span>
+                        <span class="bg-pink-100 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300 px-2 py-1 rounded flex items-center gap-1"><i class="fas fa-baby text-pink-500"></i> ${item.children} <span class="text-[10px]">أطفال</span></span>
+                        ${item.notes ? `<span class="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 px-2 py-1 rounded max-w-[100px] truncate"><i class="fas fa-note-sticky"></i> ${item.notes}</span>` : ''}
+                    </div>
+                    <div class="flex justify-between items-center pt-2 border-t dark:border-gray-700/50">
+                        <div class="text-green-600 dark:text-green-400 font-mono font-bold text-sm"><i class="fas fa-sign-in-alt"></i> ${this.formatTime12(item.inTime)}</div>
+                        ${isOut ? `<div class="text-red-500 font-mono font-bold text-sm"><i class="fas fa-sign-out-alt"></i> ${this.formatTime12(item.outTime)}</div>` : `<div class="text-green-500 text-xs font-bold animate-pulse">● نشط</div>`}
+                    </div>
+                `;
+                return div;
+            }
+
+            // --- ACTIONS ---
+            highlightRequiredField(fieldId, highlight = true) {
+                const field = document.getElementById(fieldId);
+                if(!field) return;
+                
+                if(highlight) {
+                    field.classList.add('field-required-error');
+                    // Remove error after user starts typing
+                    field.addEventListener('input', () => {
+                        field.classList.remove('field-required-error');
+                    }, { once: true });
+                    // Focus the field
+                    field.focus();
+                } else {
+                    field.classList.remove('field-required-error');
+                }
+            }
+            
+            highlightAdultsCounter(highlight = true) {
+                // Find the adults counter container - it's the first div in the grid
+                const gridContainer = document.querySelector('#entryModal .grid.grid-cols-2');
+                if(!gridContainer) return;
+                
+                const adultsContainer = gridContainer.firstElementChild;
+                if(!adultsContainer) return;
+                
+                if(highlight) {
+                    adultsContainer.classList.add('adults-counter-error');
+                    // Remove error when user clicks + button
+                    const observer = new MutationObserver(() => {
+                        const adlValue = document.getElementById('valAdl')?.innerText;
+                        if(adlValue && adlValue !== '0') {
+                            adultsContainer.classList.remove('adults-counter-error');
+                            observer.disconnect();
+                        }
+                    });
+                    const valAdl = document.getElementById('valAdl');
+                    if(valAdl) {
+                        observer.observe(valAdl, { childList: true, subtree: true });
+                    }
+                } else {
+                    adultsContainer.classList.remove('adults-counter-error');
+                }
+            }
+            
+            async validateEntry() {
+                const room = document.getElementById('inRoom').value;
+                const time = document.getElementById('inTime').value;
+                const rec = document.getElementById('inRec').value.trim();
+                const adl = document.getElementById('valAdl').innerText;
+                
+                let hasError = false;
+                
+                // Clear previous errors
+                this.highlightRequiredField('inRoom', false);
+                this.highlightRequiredField('inRec', false);
+                this.highlightRequiredField('inTime', false);
+                this.highlightAdultsCounter(false);
+                
+                if(!room) {
+                    this.highlightRequiredField('inRoom', true);
+                    hasError = true;
+                }
+                if(!rec) {
+                    this.highlightRequiredField('inRec', true);
+                    hasError = true;
+                }
+                if(adl === '0') {
+                    // Highlight adults counter instead of showing alert
+                    this.highlightAdultsCounter(true);
+                    hasError = true;
+                }
+                if(!time) {
+                    // Time field - highlight it
+                    this.highlightRequiredField('inTime', true);
+                    hasError = true;
+                }
+                
+                if(hasError) {
+                    return;
+                }
+                
+                // Check Duplicate locally before sending
+                const exists = this.data.find(i => i.room === room && i.type === 'in');
+                if(exists) { 
+                    let msg = this.t('msg_room_busy');
+                    msg = msg.replace('{room}', room).replace('{time}', this.formatTime12(exists.inTime));
+                    this.showModal('confirm', this.t('modal_confirm'), msg, () => this.doSubmitEntry());
+                    return; 
+                }
+                await this.doSubmitEntry();
+            }
+            
+            async doSubmitEntry() {
+                try {
+                    await addDoc(collection(db, "movements"), {
+                        branch: this.user.branchName,
+                        type: 'in',
+                        room: document.getElementById('inRoom').value,
+                        inTime: document.getElementById('inTime').value,
+                        reception: document.getElementById('inRec').value.trim(),
+                        adults: document.getElementById('valAdl').innerText,
+                        children: document.getElementById('valChd').innerText,
+                        notes: document.getElementById('inNotes').value,
+                        createdAt: serverTimestamp()
+                    });
+                    this.closeModals();
+                    this.updateUI();
+                    this.showFeedback(this.t('msg_success_entry'), 'success');
+                } catch(e) {
+                    console.error(e);
+                    this.showAlert("خطأ في الاتصال");
+                    this.showFeedback("خطأ في الاتصال", 'error');
+                }
+            }
+
+            async validateCheckout() {
+                const room = document.getElementById('outRoomManual').value;
+                const time = document.getElementById('outTimeManual').value;
+                const rec = document.getElementById('outRec').value.trim();
+                const notes = document.getElementById('outNotes').value;
+
+                let hasError = false;
+                
+                // Clear previous errors
+                this.highlightRequiredField('outRoomManual', false);
+                this.highlightRequiredField('outRec', false);
+                this.highlightRequiredField('outTimeManual', false);
+
+                if(!room) {
+                    this.highlightRequiredField('outRoomManual', true);
+                    hasError = true;
+                }
+                if(!rec) {
+                    this.highlightRequiredField('outRec', true);
+                    hasError = true;
+                }
+                if(!time) {
+                    this.highlightRequiredField('outTimeManual', true);
+                    hasError = true;
+                }
+
+                if(hasError) {
+                    return;
+                }
+
+                // Find active room doc
+                const target = this.data.find(i => i.room === room && i.type === 'in');
+                
+                if(!target) {
+                    // Allow checkout for non-active room with light warning
+                    const warningDiv = document.getElementById('outRoomWarning');
+                    if(warningDiv) {
+                        warningDiv.innerHTML = `<div class="room-active-warning mt-2" style="background: rgba(255, 193, 7, 0.1); border-color: #ffc107;">
+                            <i class="fas fa-exclamation-circle text-yellow-600"></i>
+                            <span class="text-yellow-700">تنبيه: هذه الغرفة غير نشطة. سيتم إنشاء سجل خروج جديد.</span>
+                        </div>`;
+                        warningDiv.classList.remove('hidden');
+                    }
+                    
+                    // Show confirm with warning
+                    this.showModal('confirm', this.t('modal_confirm'), `تنبيه: الغرفة ${room} غير نشطة حالياً.\n\nسيتم إنشاء سجل خروج جديد. هل تريد المتابعة?`, () => this.doSubmitCheckoutForInactive());
+                    return;
+                }
+                
+                this.showModal('confirm', this.t('modal_confirm'), `تأكيد الخروج ${room}?`, () => this.doSubmitCheckout());
+            }
+            
+            async doSubmitCheckout() {
+                const room = document.getElementById('outRoomManual').value;
+                const time = document.getElementById('outTimeManual').value;
+                const notes = document.getElementById('outNotes').value;
+                const rec = document.getElementById('outRec').value.trim();
+                
+                const target = this.data.find(i => i.room === room && i.type === 'in');
+                
+                if(!target) {
+                    this.showAlert('الغرفة غير موجودة');
+                    return;
+                }
+
+                try {
+                    const ref = doc(db, "movements", target.id);
+                    await updateDoc(ref, {
+                        type: 'out',
+                        outTime: time,
+                        outNotes: notes,
+                        reception: rec,
+                        updatedAt: serverTimestamp()
+                    });
+                    this.closeModals();
+                    // Remove pulsing effect from all buttons after successful checkout
+                    this.removeCheckoutPulse();
+                    this.updateUI();
+                    this.showFeedback(this.t('msg_success_checkout'), 'success');
+                } catch(e) {
+                    console.error(e);
+                    this.showAlert("فشل تسجيل الخروج");
+                    this.showFeedback("فشل تسجيل الخروج", 'error');
+                }
+            }
+            
+            async doSubmitCheckoutForInactive() {
+                // Create new checkout record for inactive room
+                const room = document.getElementById('outRoomManual').value;
+                const time = document.getElementById('outTimeManual').value;
+                const notes = document.getElementById('outNotes').value;
+                const rec = document.getElementById('outRec').value.trim();
+
+                try {
+                    // Create a new movement record for checkout of inactive room
+                    await addDoc(collection(db, "movements"), {
+                        branch: this.user.branchName,
+                        type: 'out',
+                        room: room,
+                        inTime: null, // No entry record
+                        outTime: time,
+                        reception: rec,
+                        adults: 0, // Unknown for inactive room
+                        children: 0,
+                        notes: notes,
+                        outNotes: notes,
+                        inactiveCheckout: true, // Flag to indicate this was a checkout for inactive room
+                        createdAt: serverTimestamp(),
+                        updatedAt: serverTimestamp()
+                    });
+                    
+                    this.closeModals();
+                    // Hide warning
+                    const warningDiv = document.getElementById('outRoomWarning');
+                    if(warningDiv) {
+                        warningDiv.classList.add('hidden');
+                        warningDiv.innerHTML = '';
+                    }
+                    this.updateUI();
+                    this.showFeedback('تم تسجيل الخروج للغرفة غير النشطة بنجاح', 'success');
+                } catch(e) {
+                    console.error(e);
+                    this.showAlert("فشل تسجيل الخروج");
+                    this.showFeedback("فشل تسجيل الخروج", 'error');
+                }
+            }
+
+            quickCheckout(room, id) {
+                // Remove pulsing effect from this button
+                const btnId = `checkout-btn-${id}`;
+                const btn = document.getElementById(btnId);
+                if(btn) {
+                    btn.classList.remove('checkout-pulse-alert');
+                }
+                
+                this.openCheckoutModal();
+                const inp = document.getElementById('outRoomManual');
+                inp.value = room;
+                inp.readOnly = true;
+                inp.classList.add('opacity-50');
+            }
+
+            // --- UTILS ---
+            showAlert(msg) {
+                // Use modal for alerts instead of browser alert
+                this.showModal('alert', this.t('modal_alert'), msg);
+            }
+            
+            showModal(type, title, message, onConfirm = null) {
+                const modal = document.getElementById('confirmModal');
+                const titleEl = document.getElementById('confirmTitle');
+                const msgEl = document.getElementById('confirmMsg');
+                const buttonsEl = document.getElementById('modalButtons');
+                
+                if(!modal || !titleEl || !msgEl || !buttonsEl) return;
+                
+                titleEl.innerText = title;
+                msgEl.innerText = message;
+                
+                if(type === 'alert') {
+                    buttonsEl.innerHTML = `
+                        <button onclick="document.getElementById('confirmModal').classList.add('hidden')" 
+                                class="flex-1 bg-gold-500 hover:bg-gold-400 text-black font-bold py-3 px-4 rounded-xl transition-all active:scale-95 shadow-lg">
+                            <i class="fas fa-check mr-2"></i> ${this.t('btn_ok')}
+                        </button>
+                    `;
+                } else if(type === 'confirm') {
+                    buttonsEl.innerHTML = `
+                        <button onclick="document.getElementById('confirmModal').classList.add('hidden')" 
+                                class="flex-1 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-white font-bold py-3 px-4 rounded-xl transition-all active:scale-95">
+                            <i class="fas fa-times mr-2"></i> ${this.t('btn_cancel')}
+                        </button>
+                        <button onclick="document.getElementById('confirmModal').classList.add('hidden'); if(window.sys._confirmCallback) window.sys._confirmCallback();" 
+                                class="flex-1 bg-gold-500 hover:bg-gold-400 text-black font-bold py-3 px-4 rounded-xl transition-all active:scale-95 shadow-lg">
+                            <i class="fas fa-check mr-2"></i> ${this.t('btn_yes')}
+                        </button>
+                    `;
+                    this._confirmCallback = onConfirm;
+                }
+                
+                modal.classList.remove('hidden');
+            }
+            
+            showFeedback(message, type = 'success') {
+                const toast = document.getElementById('feedbackToast');
+                const toastText = document.getElementById('feedbackToastText');
+                
+                if(!toast || !toastText) return;
+                
+                // Remove previous type classes
+                toast.classList.remove('success', 'error', 'info');
+                toast.classList.add(type);
+                
+                // Set icon based on type
+                let icon = 'fa-check-circle';
+                if(type === 'error') icon = 'fa-exclamation-circle';
+                else if(type === 'info') icon = 'fa-info-circle';
+                
+                // Update content
+                toast.innerHTML = `<i class="fas ${icon}"></i><span id="feedbackToastText">${message}</span>`;
+                
+                // Show toast
+                toast.classList.remove('hidden');
+                setTimeout(() => {
+                    toast.classList.add('show');
+                }, 10);
+                
+                // Hide after 3 seconds
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                    setTimeout(() => {
+                        toast.classList.add('hidden');
+                    }, 300);
+                }, 3000);
+            }
+            
+            formatTime12(time24) {
+                if(!time24) return '';
+                let [h, m] = time24.split(':'); h = parseInt(h);
+                const suffix = h >= 12 ? 'م' : 'ص';
+                h = h % 12 || 12; return `${String(h).padStart(2, '0')}:${m} ${suffix}`;
+            }
+
+            tick() { return new Date().toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit', hour12:false}); }
+
+            // --- UI HELPERS ---
+            initTheme() { if(this.isDark) document.documentElement.classList.add('dark'); }
+            toggleTheme() { 
+                this.isDark = !this.isDark; 
+                document.documentElement.classList.toggle('dark');
+                localStorage.setItem('bellman_theme', this.isDark ? 'dark' : 'light');
+            }
+            toggleFab() { document.getElementById('fabContainer').classList.toggle('active'); }
+            closeModals() { 
+                document.getElementById('entryModal').classList.add('hidden');
+                document.getElementById('outModal').classList.add('hidden');
+                document.getElementById('fabContainer').classList.remove('active', 'hidden-fab');
+            }
+            openEntryModal() {
+                document.getElementById('entryModal').classList.remove('hidden');
+                document.getElementById('fabContainer').classList.add('hidden-fab');
+                document.getElementById('inRoom').value = '';
+                document.getElementById('inRec').value = '';
+                document.getElementById('inTime').value = this.tick();
+                document.getElementById('inNotes').value = '';
+                document.getElementById('valAdl').innerText = '0';
+                document.getElementById('valChd').innerText = '0';
+                // Hide room warning
+                const warning = document.getElementById('roomActiveWarning');
+                if(warning) warning.classList.add('hidden');
+                // Clear all error highlights
+                this.highlightRequiredField('inRoom', false);
+                this.highlightRequiredField('inRec', false);
+                this.highlightRequiredField('inTime', false);
+                this.highlightAdultsCounter(false);
+                // Load reception staff for current branch before rendering buttons
+                this.loadReceptionStaff();
+                this.renderReceptionButtons('in');
+            }
+            
+            checkRoomActive(roomNumber) {
+                const warning = document.getElementById('roomActiveWarning');
+                const warningText = document.getElementById('roomActiveWarningText');
+                
+                if(!warning || !warningText) return;
+                
+                // Hide warning if room is empty
+                if(!roomNumber || roomNumber.trim() === '') {
+                    warning.classList.add('hidden');
+                    return;
+                }
+                
+                // Check if room is active
+                const activeRoom = this.data.find(i => i.room === roomNumber && i.type === 'in');
+                
+                if(activeRoom) {
+                    // Show warning with room details
+                    const inTime = this.formatTime12(activeRoom.inTime);
+                    warningText.innerText = `⚠️ الغرفة ${roomNumber} نشطة حالياً (دخول: ${inTime})`;
+                    warning.classList.remove('hidden');
+                    
+                    // Also highlight the input field
+                    const roomInput = document.getElementById('inRoom');
+                    if(roomInput) {
+                        roomInput.classList.add('field-required-error');
+                    }
+                } else {
+                    // Hide warning if room is not active
+                    warning.classList.add('hidden');
+                    const roomInput = document.getElementById('inRoom');
+                    if(roomInput) {
+                        roomInput.classList.remove('field-required-error');
+                    }
+                }
+            }
+            openCheckoutModal() {
+                document.getElementById('outModal').classList.remove('hidden');
+                document.getElementById('fabContainer').classList.add('hidden-fab');
+                document.getElementById('outRoomManual').value = '';
+                document.getElementById('outTimeManual').value = this.tick();
+                document.getElementById('outNotes').value = '';
+                document.getElementById('outRec').value = '';
+                // Load reception staff for current branch before rendering buttons
+                this.loadReceptionStaff();
+                this.renderReceptionButtons('out');
+                // Render suggestions
+                const sug = document.getElementById('activeSuggestions');
+                sug.innerHTML = '';
+                const active = this.data.filter(i => i.type === 'in');
+                if (active.length === 0) {
+                    sug.innerHTML = `<span class="text-xs text-gray-500">لا توجد بيانات</span>`;
+                } else {
+                    active.forEach(item => {
+                        const chip = document.createElement('div');
+                        chip.className = 'flex-shrink-0 bg-white dark:bg-gray-800 border dark:border-gray-700 px-3 py-2 rounded-lg cursor-pointer shadow-sm hover:bg-red-50 dark:hover:bg-red-900/20 text-center min-w-[60px]';
+                        chip.innerHTML = `<span class="block font-bold text-lg">${item.room}</span><span class="text-[10px] text-gray-400">${this.formatTime12(item.inTime)}</span>`;
+                        chip.onclick = () => {
+                            document.getElementById('outRoomManual').value = item.room;
+                        };
+                        sug.appendChild(chip);
+                    });
+                }
+            }
+            adj(id, v) { 
+                const el = document.getElementById(id); 
+                let n = parseInt(el.innerText) + v; 
+                if(n < 0) n = 0; el.innerText = n; 
+            }
+            initDraggable() {
+                const fab = document.getElementById('fabContainer');
+                const dragBtn = document.getElementById('dragBtn');
+                let isDragging = false, startY, startX, initialTop, initialLeft;
+                dragBtn.addEventListener('touchstart', (e) => { 
+                    isDragging = true; 
+                    startY = e.touches[0].clientY; startX = e.touches[0].clientX; 
+                    const rect = fab.getBoundingClientRect(); 
+                    initialTop = rect.top; initialLeft = rect.left; 
+                });
+                document.addEventListener('touchmove', (e) => { 
+                    if (!isDragging) return; 
+                    e.preventDefault(); 
+                    fab.style.top = `${initialTop + (e.touches[0].clientY - startY)}px`; 
+                    fab.style.left = `${initialLeft + (e.touches[0].clientX - startX)}px`; 
+                }, { passive: false });
+                document.addEventListener('touchend', () => { isDragging = false; });
+            }
+            printReport() {
+                document.getElementById('printBellman').innerText = this.user.name;
+                document.getElementById('printBranch').innerText = this.user.branchName;
+                document.getElementById('printDate').innerText = new Date().toLocaleDateString('ar-EG');
+                const tbody = document.getElementById('printTableBody');
+                tbody.innerHTML = '';
+                this.data.forEach(r => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `<td><strong>${r.room}</strong></td><td>${this.formatTime12(r.inTime)}</td><td>${r.outTime ? this.formatTime12(r.outTime) : '-'}</td><td>${r.reception}</td><td>${r.adults} بالغ / ${r.children} طفل</td><td style="text-align: right; font-size: 10px;">${r.notes || ''}</td>`;
+                    tbody.appendChild(tr);
+                });
+                window.print();
+            }
+            
+            async closeShift() {
+                // Check if there are any active rooms
+                const activeRooms = this.data.filter(i => i.type === 'in');
+                let confirmMessage = 'هل أنت متأكد من إغلاق الشفت؟ سيتم حفظ جميع البيانات في الأرشيف.';
+                
+                if(activeRooms.length > 0) {
+                    // Add pulsing effect to all quick checkout buttons
+                    activeRooms.forEach(room => {
+                        const btnId = `checkout-btn-${room.id}`;
+                        const btn = document.getElementById(btnId);
+                        if(btn) {
+                            btn.classList.add('checkout-pulse-alert');
+                        }
+                    });
+                    
+                    // Show warning but allow closing
+                    confirmMessage = `تنبيه: يوجد ${activeRooms.length} غرفة نشطة لم يتم تسجيل خروجها. سيتم ترحيلها للشفت التالي.\n\nهل أنت متأكد من إغلاق الشفت؟`;
+                }
+                
+                // Confirm closing shift (always allow, even with active rooms)
+                this.showModal('confirm', 'إغلاق الشفت', confirmMessage, () => this.doCloseShift());
+            }
+            
+            removeCheckoutPulse() {
+                // Remove pulsing effect from all checkout buttons
+                document.querySelectorAll('.checkout-pulse-alert').forEach(btn => {
+                    btn.classList.remove('checkout-pulse-alert');
+                });
+            }
+            
+            async doCloseShift() {
+                try {
+                    // Get today's date
+                    const today = new Date().toISOString().split('T')[0];
+                    const branchKey = this.user.branchName.replace(/\s/g, '_');
+                    
+                    // Separate active rooms (type === 'in') from completed ones (type === 'out')
+                    const activeRooms = this.data.filter(mov => mov.type === 'in');
+                    const completedMovements = this.data.filter(mov => mov.type === 'out');
+                    
+                    // Prepare completed movements for archive (only those with checkout)
+                    const movementsToArchive = completedMovements.map(mov => ({
+                        room: mov.room,
+                        type: mov.type,
+                        inTime: mov.inTime,
+                        outTime: mov.outTime || null,
+                        reception: mov.reception || null,
+                        adults: mov.adults || 0,
+                        children: mov.children || 0,
+                        notes: mov.notes || null,
+                        outNotes: mov.outNotes || null,
+                        inactiveCheckout: mov.inactiveCheckout || false // Preserve inactive checkout flag
+                    }));
+                    
+                    // Save to archive only if there are completed movements
+                    if(movementsToArchive.length > 0) {
+                        const archiveCollection = collection(db, `history_movements_${branchKey}`);
+                        await addDoc(archiveCollection, {
+                            date: today,
+                            branch: this.user.branchName,
+                            bellman: this.user.name,
+                            movements: movementsToArchive,
+                            createdAt: serverTimestamp()
+                        });
+                    }
+                    
+                    // Delete only completed movements (type === 'out')
+                    // Active rooms (type === 'in') will remain for the next shift
+                    const deletePromises = completedMovements.map(mov => {
+                        const ref = doc(db, "movements", mov.id);
+                        return deleteDoc(ref).catch(err => {
+                            console.warn('Could not delete document:', err);
+                            // If delete fails, mark as deleted
+                            return updateDoc(ref, { deleted: true, archivedAt: serverTimestamp() }).catch(() => {});
+                        });
+                    });
+                    
+                    await Promise.all(deletePromises);
+                    
+                    // Active rooms remain in the collection - they will appear in the next shift
+                    let successMessage = 'تم إغلاق الشفت بنجاح';
+                    if(movementsToArchive.length > 0) {
+                        successMessage += ' وحفظ البيانات في الأرشيف';
+                    }
+                    if(activeRooms.length > 0) {
+                        successMessage += `. تم ترحيل ${activeRooms.length} غرفة نشطة للشفت التالي`;
+                    }
+                    
+                    this.showFeedback(successMessage, 'success');
+                    
+                    // Update UI immediately to show remaining active rooms
+                    // Remove completed movements from local data
+                    this.data = this.data.filter(mov => mov.type === 'in');
+                    this.updateUI();
+                    
+                    // The active rooms will remain visible in the interface
+                    // No need to reload - the listener will update automatically
+                    
+                } catch(e) {
+                    console.error('Error closing shift:', e);
+                    this.showAlert('حدث خطأ أثناء إغلاق الشفت');
+                    this.showFeedback('فشل إغلاق الشفت', 'error');
+                }
+            }
+            
+            logout() {
+                localStorage.removeItem('bellman_user');
+                if(this.unsub) this.unsub();
+                location.reload();
+            }
+            
+            // --- RECEPTION STAFF MANAGEMENT ---
+            openReceptionModal() {
+                const modal = document.getElementById('receptionModal');
+                if(!modal) {
+                    console.error('receptionModal not found');
+                    return;
+                }
+                modal.classList.remove('hidden');
+                
+                // Check if we're in login screen (no user logged in yet)
+                const loginScreen = document.getElementById('loginScreen');
+                const isLoginScreen = loginScreen && !loginScreen.classList.contains('hidden');
+                
+                if(isLoginScreen) {
+                    // Get branch code from login form
+                    const loginBranch = document.getElementById('loginBranch');
+                    const branchCode = loginBranch ? loginBranch.value.trim() : null;
+                    if(branchCode && (branchCode === '1' || branchCode === '2')) {
+                        this.loadReceptionStaff(branchCode);
+                    } else {
+                        // No branch selected yet, show empty list
+                        this.receptionStaff = [];
+                    }
+                } else {
+                    // User is logged in, load for current branch
+                    this.loadReceptionStaff();
+                }
+                
+                this.renderReceptionList();
+            }
+            
+            addReception() {
+                const input = document.getElementById('receptionInput');
+                const name = input.value.trim();
+                if(!name) return;
+                if(this.receptionStaff.includes(name)) {
+                    this.showAlert(this.t('reception_duplicate'));
+                    return;
+                }
+                
+                // Check if we're in login screen
+                const loginScreen = document.getElementById('loginScreen');
+                const isLoginScreen = loginScreen && !loginScreen.classList.contains('hidden');
+                
+                this.receptionStaff.push(name);
+                
+                if(isLoginScreen) {
+                    // Get branch code from login form
+                    const loginBranch = document.getElementById('loginBranch');
+                    const branchCode = loginBranch ? loginBranch.value.trim() : null;
+                    if(branchCode && (branchCode === '1' || branchCode === '2')) {
+                        this.saveReceptionStaff(branchCode);
+                    }
+                } else {
+                    this.saveReceptionStaff();
+                }
+                
+                input.value = '';
+                this.renderReceptionList();
+                
+                // Update buttons in entry/checkout modals if they are open
+                this.updateReceptionButtonsIfOpen();
+            }
+            
+            removeReception(name) {
+                const index = this.receptionStaff.indexOf(name);
+                if(index > -1) {
+                    this.receptionStaff.splice(index, 1);
+                    
+                    // Check if we're in login screen
+                    const loginScreen = document.getElementById('loginScreen');
+                    const isLoginScreen = loginScreen && !loginScreen.classList.contains('hidden');
+                    
+                    if(isLoginScreen) {
+                        // Get branch code from login form
+                        const loginBranch = document.getElementById('loginBranch');
+                        const branchCode = loginBranch ? loginBranch.value.trim() : null;
+                        if(branchCode && (branchCode === '1' || branchCode === '2')) {
+                            this.saveReceptionStaff(branchCode);
+                        }
+                    } else {
+                        this.saveReceptionStaff();
+                    }
+                    
+                    this.renderReceptionList();
+                    
+                    // Update buttons in entry/checkout modals if they are open
+                    this.updateReceptionButtonsIfOpen();
+                }
+            }
+            
+            updateReceptionButtonsIfOpen() {
+                // Check if entry modal is open and update its buttons
+                const entryModal = document.getElementById('entryModal');
+                if(entryModal && !entryModal.classList.contains('hidden')) {
+                    this.renderReceptionButtons('in');
+                }
+                
+                // Check if checkout modal is open and update its buttons
+                const outModal = document.getElementById('outModal');
+                if(outModal && !outModal.classList.contains('hidden')) {
+                    this.renderReceptionButtons('out');
+                }
+            }
+            
+            saveReceptionStaff(branchCode = null) {
+                // Save reception staff with branch-specific key
+                const key = this.getReceptionStaffKey(branchCode);
+                localStorage.setItem(key, JSON.stringify(this.receptionStaff));
+            }
+            
+            renderReceptionList() {
+                const listDiv = document.getElementById('receptionList');
+                if(this.receptionStaff.length === 0) {
+                    listDiv.innerHTML = `<p class="text-center text-gray-400 text-sm w-full">لا توجد أسماء محفوظة</p>`;
+                    return;
+                }
+                listDiv.innerHTML = this.receptionStaff.map(name => `
+                    <span class="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-3 py-2 rounded-lg text-sm font-bold flex items-center gap-2">
+                        ${name}
+                        <button onclick="window.sys.removeReception('${name}')" class="text-red-500 hover:text-red-700"><i class="fas fa-times"></i></button>
+                    </span>
+                `).join('');
+            }
+            
+            renderReceptionButtons(type) {
+                const container = document.getElementById(type === 'in' ? 'inRecButtons' : 'outRecButtons');
+                if(!container) {
+                    console.warn('Reception buttons container not found:', type === 'in' ? 'inRecButtons' : 'outRecButtons');
+                    return;
+                }
+                
+                // Ensure reception staff is loaded
+                if(!this.receptionStaff || this.receptionStaff.length === 0) {
+                    // Try to load if not loaded
+                    this.loadReceptionStaff();
+                }
+                
+                if(!this.receptionStaff || this.receptionStaff.length === 0) {
+                    container.innerHTML = '';
+                    return;
+                }
+                
+                container.innerHTML = this.receptionStaff.map(name => `
+                    <button type="button" onclick="document.getElementById('${type === 'in' ? 'inRec' : 'outRec'}').value='${name}'" class="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-3 py-1 rounded-lg text-xs font-bold hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors active:scale-95">
+                        ${name}
+                    </button>
+                `).join('');
+            }
+            
+            openHistoryModal() {
+                document.getElementById('historyModal').classList.remove('hidden');
+                const today = new Date();
+                const dateStr = today.toISOString().split('T')[0];
+                document.getElementById('historyDate').value = dateStr;
+            }
+            
+            formatTimeAr(time24) {
+                if(!time24) return '';
+                let [h, m] = time24.split(':'); h = parseInt(h);
+                const suffix = h >= 12 ? 'مساء' : 'صباحاً';
+                h = h % 12 || 12; return `${String(h).padStart(2, '0')}:${m} ${suffix}`;
+            }
+            
+            parseTimeToMinutes(time24) {
+                if(!time24) return 0;
+                const [h, m] = time24.split(':').map(Number);
+                return h * 60 + m;
+            }
+            
+            formatDateWithDay(dateStr, time24) {
+                if(!dateStr) return '';
+                const date = new Date(dateStr + 'T00:00:00');
+                const days = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+                const dayName = days[date.getDay()];
+                const day = String(date.getDate()).padStart(2, '0');
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const year = date.getFullYear();
+                const dateFormatted = `${day}/${month}/${year}`;
+                if(!time24) return `${dayName} - ${dateFormatted}`;
+                let [h, m] = time24.split(':'); h = parseInt(h);
+                const suffix = h >= 12 ? 'مساء' : 'صباحاً';
+                h = h % 12 || 12;
+                const timeFormatted = `${String(h).padStart(2, '0')}:${m}`;
+                return `${dayName} - ${timeFormatted} ${dateFormatted} ${suffix}`;
+            }
+            
+            async fetchHistory() {
+                const date = document.getElementById('historyDate').value;
+                if(!date) {
+                    alert('اختر التاريخ أولاً');
+                    return;
+                }
+                const listDiv = document.getElementById('historyList');
+                listDiv.innerHTML = '<p class="text-center mt-4"><i class="fas fa-spinner fa-spin text-purple-500"></i> <span class="text-sm">جاري البحث...</span></p>';
+                try {
+                    const branchKey = this.user.branchName.replace(/\s/g, '_');
+                    this.currentHistoryData = [];
+                    this.currentHistoryDate = date;
+                    
+                    // 1. Search in archived history
+                    const archiveQuery = query(collection(db, `history_movements_${branchKey}`), where("date", "==", date));
+                    const archiveSnap = await getDocs(archiveQuery);
+                    
+                    if(!archiveSnap.empty) {
+                        archiveSnap.forEach(docItem => {
+                            const data = docItem.data();
+                            if(data.movements && data.movements.length > 0) {
+                                data.movements.forEach(mov => {
+                                    if(mov.type !== 'in') {
+                                        // Ensure inactiveCheckout is preserved from archive
+                                        const archiveMov = {
+                                            room: mov.room,
+                                            type: mov.type,
+                                            inTime: mov.inTime || null,
+                                            outTime: mov.outTime || null,
+                                            reception: mov.reception || null,
+                                            adults: mov.adults || 0,
+                                            children: mov.children || 0,
+                                            notes: mov.notes || null,
+                                            outNotes: mov.outNotes || null,
+                                            inactiveCheckout: mov.inactiveCheckout || false
+                                        };
+                                        this.currentHistoryData.push(archiveMov);
+                                    }
+                                });
+                            }
+                        });
+                    }
+                    
+                    // 2. Also search in current movements for checkouts (including inactive checkouts) that match the date
+                    const movementsQuery = query(
+                        collection(db, "movements"),
+                        where("branch", "==", this.user.branchName),
+                        where("type", "==", "out")
+                    );
+                    const movementsSnap = await getDocs(movementsQuery);
+                    
+                    if(!movementsSnap.empty) {
+                        movementsSnap.forEach(docItem => {
+                            const data = docItem.data();
+                            // Check if this movement's date matches the selected date
+                            // Use createdAt or updatedAt to determine the date
+                            let movementDate = null;
+                            if(data.createdAt) {
+                                if(data.createdAt.toDate) {
+                                    movementDate = data.createdAt.toDate().toISOString().split('T')[0];
+                                } else if(data.createdAt instanceof Date) {
+                                    movementDate = data.createdAt.toISOString().split('T')[0];
+                                } else {
+                                    movementDate = new Date(data.createdAt).toISOString().split('T')[0];
+                                }
+                            } else if(data.updatedAt) {
+                                if(data.updatedAt.toDate) {
+                                    movementDate = data.updatedAt.toDate().toISOString().split('T')[0];
+                                } else if(data.updatedAt instanceof Date) {
+                                    movementDate = data.updatedAt.toISOString().split('T')[0];
+                                } else {
+                                    movementDate = new Date(data.updatedAt).toISOString().split('T')[0];
+                                }
+                            }
+                            
+                            // If date matches and not deleted, add to history
+                            if(movementDate === date && !data.deleted) {
+                                this.currentHistoryData.push({
+                                    room: data.room,
+                                    type: data.type,
+                                    inTime: data.inTime || null,
+                                    outTime: data.outTime || null,
+                                    reception: data.reception || null,
+                                    adults: data.adults || 0,
+                                    children: data.children || 0,
+                                    notes: data.notes || null,
+                                    outNotes: data.outNotes || null,
+                                    inactiveCheckout: data.inactiveCheckout || false
+                                });
+                            }
+                        });
+                    }
+                    
+                    listDiv.innerHTML = '';
+                    
+                    if(this.currentHistoryData.length > 0) {
+                        this.currentHistoryData.sort((a, b) => {
+                            const timeA = a.outTime ? this.parseTimeToMinutes(a.outTime) : (a.inTime ? this.parseTimeToMinutes(a.inTime) : 0);
+                            const timeB = b.outTime ? this.parseTimeToMinutes(b.outTime) : (b.inTime ? this.parseTimeToMinutes(b.inTime) : 0);
+                            return timeB - timeA;
+                        });
+                        this.currentHistoryData.forEach(mov => {
+                            const div = document.createElement('div');
+                            // Color coding based on movement type
+                            let bgColorClass = 'bg-gray-50 dark:bg-slate-700';
+                            let borderColorClass = 'border-gray-200 dark:border-slate-600';
+                            
+                            if(mov.inactiveCheckout) {
+                                // Orange for inactive checkout (no entry)
+                                bgColorClass = 'bg-orange-50 dark:bg-orange-900/20';
+                                borderColorClass = 'border-orange-300 dark:border-orange-700';
+                            } else if(mov.inTime && mov.outTime) {
+                                // Green for normal checkout (with entry and checkout)
+                                bgColorClass = 'bg-green-50 dark:bg-green-900/20';
+                                borderColorClass = 'border-green-300 dark:border-green-700';
+                            } else if(mov.transferred) {
+                                // Blue for transferred movements
+                                bgColorClass = 'bg-blue-50 dark:bg-blue-900/20';
+                                borderColorClass = 'border-blue-300 dark:border-blue-700';
+                            }
+                            
+                            div.className = `mb-3 ${bgColorClass} p-3 rounded-xl border-2 ${borderColorClass}`;
+                            const inTime = this.formatTimeAr(mov.inTime) || '--';
+                            const outTime = mov.outTime ? this.formatTimeAr(mov.outTime) : '--';
+                            // Show indicator for inactive checkout
+                            const inactiveBadge = mov.inactiveCheckout ? '<span class="text-xs bg-orange-200 dark:bg-orange-800 text-orange-800 dark:text-orange-200 px-2 py-0.5 rounded ml-2 font-bold">خروج بدون دخول</span>' : '';
+                            div.innerHTML = `
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="text-lg font-black text-gray-800 dark:text-white">${mov.room}${inactiveBadge}</span>
+                                    <div class="text-xs font-mono text-gray-600 dark:text-gray-400">${inTime} → ${outTime}</div>
+                                </div>
+                                <div class="text-xs text-gray-600 dark:text-gray-300">🤵 ${mov.reception || '-'} | 👥 ${mov.adults} بالغ / ${mov.children} طفل</div>
+                                ${mov.notes || mov.outNotes ? `<div class="mt-2 text-xs bg-yellow-50 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-300 p-2 rounded">📝 ${mov.notes || mov.outNotes}</div>` : ''}
+                            `;
+                            listDiv.appendChild(div);
+                        });
+                    } else {
+                        listDiv.innerHTML = '<p class="text-center text-gray-400 mt-10 text-sm">لا يوجد عمليات للتاريخ المحدد</p>';
+                    }
+                } catch(e) {
+                    console.error('History fetch error:', e);
+                    listDiv.innerHTML = '<p class="text-center text-red-400 mt-4 text-sm font-bold">حدث خطأ: ' + (e.message || 'خطأ غير معروف') + '</p>';
+                }
+            }
+            
+            printHistoryReport() {
+                if(this.currentHistoryData.length === 0) {
+                    alert('لا توجد بيانات للطباعة. ابحث عن تاريخ أولاً.');
+                    return;
+                }
+                document.getElementById('printHistoryBranch').innerText = this.user.branchName;
+                document.getElementById('printHistoryBellman').innerText = this.user.name;
+                const dateObj = new Date(this.currentHistoryDate + 'T00:00:00');
+                const days = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+                const dayName = days[dateObj.getDay()];
+                const day = String(dateObj.getDate()).padStart(2, '0');
+                const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+                const year = dateObj.getFullYear();
+                document.getElementById('printHistoryDate').innerText = `${dayName} - ${day}/${month}/${year}`;
+                const tbody = document.getElementById('printHistoryTableBody');
+                tbody.innerHTML = '';
+                const sortedData = [...this.currentHistoryData].sort((a, b) => {
+                    const timeA = a.inTime ? this.parseTimeToMinutes(a.inTime) : 0;
+                    const timeB = b.inTime ? this.parseTimeToMinutes(b.inTime) : 0;
+                    if(timeA !== timeB) return timeA - timeB;
+                    return parseInt(a.room) - parseInt(b.room);
+                });
+                sortedData.forEach(mov => {
+                    const tr = document.createElement('tr');
+                    const inTimeFormatted = mov.inTime ? this.formatDateWithDay(this.currentHistoryDate, mov.inTime) : '--';
+                    const outTimeFormatted = mov.outTime ? this.formatDateWithDay(this.currentHistoryDate, mov.outTime) : '--';
+                    // Add indicator for inactive checkout in room number
+                    const roomDisplay = mov.inactiveCheckout ? `${mov.room} (خروج بدون دخول)` : mov.room;
+                    
+                    // Color coding for print report rows
+                    let rowBgColor = '';
+                    if(mov.inactiveCheckout) {
+                        rowBgColor = 'background-color: #fff7ed;'; // Light orange
+                    } else if(mov.inTime && mov.outTime) {
+                        rowBgColor = 'background-color: #f0fdf4;'; // Light green
+                    } else if(mov.transferred) {
+                        rowBgColor = 'background-color: #eff6ff;'; // Light blue
+                    }
+                    
+                    tr.style.cssText = rowBgColor;
+                    tr.innerHTML = `
+                        <td><strong>${roomDisplay}</strong></td>
+                        <td style="text-align: right; font-size: 8px;">${inTimeFormatted}</td>
+                        <td style="text-align: right; font-size: 8px;">${outTimeFormatted}</td>
+                        <td>${mov.reception || '-'}</td>
+                        <td>${mov.adults || '0'}</td>
+                        <td>${mov.children || '0'}</td>
+                        <td style="text-align: right; font-size: 7px;">${mov.notes || mov.outNotes || ''}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+                document.getElementById('printHistoryArea').classList.remove('hidden');
+                window.print();
+                setTimeout(() => {
+                    document.getElementById('printHistoryArea').classList.add('hidden');
+                }, 100);
+            }
+        }
+
+        window.sys = new System();
+        document.getElementById('btnLogin').onclick = () => window.sys.attemptLogin();
+        
+        // PWA REGISTRATION
+        if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js').then((reg) => {
+                    console.log('SW Registered', reg);
+                }).catch((err) => {
+                    console.log('SW Registration failed:', err);
+                });
+            });
+        }
+    </script>
+</body>
+</html>
