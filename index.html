@@ -413,6 +413,23 @@
         <span id="feedbackToastText"></span>
     </div>
 
+    <!-- Room Picker Modal -->
+    <div id="roomPickerModal" class="fixed inset-0 z-[70] hidden">
+        <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="window.sys.closeRoomPicker()"></div>
+        <div class="absolute bottom-0 w-full bg-white dark:bg-dark-surface rounded-t-3xl p-6 max-h-[80vh] flex flex-col">
+            <h3 id="roomPickerTitle" class="text-xl font-bold text-center mb-4 dark:text-white">اختر الغرفة</h3>
+            <div class="mb-4">
+                <p class="text-sm font-bold text-gray-600 dark:text-gray-400 mb-2">اختر الدور:</p>
+                <div id="floorButtons" class="grid grid-cols-3 gap-2 mb-4"></div>
+            </div>
+            <div class="flex-1 overflow-y-auto">
+                <p class="text-sm font-bold text-gray-600 dark:text-gray-400 mb-2">اختر الغرفة:</p>
+                <div id="roomButtons" class="grid grid-cols-4 gap-2"></div>
+            </div>
+            <button onclick="window.sys.closeRoomPicker()" class="w-full mt-4 py-3 bg-gray-700 text-white rounded-xl font-bold">إلغاء</button>
+        </div>
+    </div>
+
     <div id="entryModal" class="fixed inset-0 z-[60] hidden">
         <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="window.sys.closeModals()"></div>
         <div class="absolute bottom-0 w-full bg-gray-100 dark:bg-dark-surface rounded-t-3xl p-6 transition-transform">
@@ -420,7 +437,11 @@
             <div class="space-y-3">
                 <div class="flex gap-2">
                     <div class="flex-1">
-                        <input type="number" id="inRoom" class="w-full p-4 rounded-xl text-center text-xl font-bold bg-white dark:bg-dark-bg border dark:border-gray-700 outline-none" placeholder="رقم الغرفة" oninput="window.sys.checkRoomActive(this.value)">
+                        <button type="button" onclick="window.sys.openRoomPicker('inRoom')" id="inRoomBtn" class="w-full p-4 rounded-xl text-center text-xl font-bold bg-white dark:bg-dark-bg border dark:border-gray-700 outline-none flex items-center justify-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                            <span id="inRoomDisplay" class="text-gray-400">اختر الغرفة</span>
+                            <i class="fas fa-chevron-down text-sm text-gray-400"></i>
+                        </button>
+                        <input type="hidden" id="inRoom" value="" onchange="window.sys.checkRoomActive(this.value)">
                         <div id="roomActiveWarning" class="room-active-warning hidden">
                             <i class="fas fa-exclamation-triangle"></i>
                             <span id="roomActiveWarningText"></span>
@@ -467,7 +488,13 @@
         <div class="absolute bottom-0 w-full bg-gray-100 dark:bg-dark-surface rounded-t-3xl p-6">
             <h3 class="text-xl font-bold mb-4 text-red-600">تسجيل خروج</h3>
             <div class="flex gap-2 mb-4">
-                <input type="number" id="outRoomManual" class="flex-1 p-4 rounded-xl text-center text-xl font-bold bg-white dark:bg-dark-bg border-2 border-red-500/30 focus:border-red-500 outline-none" placeholder="رقم الغرفة">
+                <div class="flex-1">
+                    <button type="button" onclick="window.sys.openRoomPicker('outRoomManual')" id="outRoomManualBtn" class="w-full p-4 rounded-xl text-center text-xl font-bold bg-white dark:bg-dark-bg border-2 border-red-500/30 focus:border-red-500 outline-none flex items-center justify-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                        <span id="outRoomManualDisplay" class="text-gray-400">اختر الغرفة</span>
+                        <i class="fas fa-chevron-down text-sm text-gray-400"></i>
+                    </button>
+                    <input type="hidden" id="outRoomManual" value="">
+                </div>
                 <input type="time" id="outTimeManual" class="w-32 p-4 rounded-xl text-center font-bold bg-white dark:bg-dark-bg border dark:border-gray-700">
             </div>
             <div class="mb-4">
@@ -673,6 +700,26 @@
                 msg_inactive_room_warning: "Sachetan: Ei room aktive na. Notun checkout record toiri hobe.",
                 msg_inactive_room_confirm: "Sachetan: Room {room} ekhon aktive na.\n\nNotun checkout record toiri hobe. Agabe jaben?",
                 msg_checkout_inactive_success: "Inaktive room er checkout save hoyeche"
+            }
+        };
+
+        // ROOMS CONFIGURATION (from hous project)
+        const roomsConfig = {
+            corniche: { 
+                1: [101,102,103,104], 
+                2: [201,202,203,204,205,206], 
+                3: [301,302,303,304,305,306,307,308,309,310], 
+                4: [401,402,403,404,405,406,407,408,409,410], 
+                5: [501,502,503,504,505,506], 
+                6: [601,602,603,604] 
+            },
+            andalus: { 
+                1: [101,102,103,104,105,106,107,108], 
+                2: [201,202,203,204,205,206,207,208], 
+                3: [301,302,303,304,305,306,307,308], 
+                4: [401,402,403,404,405,406,407,408], 
+                5: [501,502,503,504,505,506,507,508], 
+                6: [601,602,603,604] 
             }
         };
 
@@ -1234,8 +1281,19 @@
                 this.openCheckoutModal();
                 const inp = document.getElementById('outRoomManual');
                 inp.value = room;
-                inp.readOnly = true;
-                inp.classList.add('opacity-50');
+                // Update display
+                const displaySpan = document.getElementById('outRoomManualDisplay');
+                if(displaySpan) {
+                    displaySpan.innerText = room;
+                    displaySpan.classList.remove('text-gray-400');
+                    displaySpan.classList.add('text-gray-800', 'dark:text-white');
+                }
+                const displayBtn = document.getElementById('outRoomManualBtn');
+                if(displayBtn) {
+                    displayBtn.classList.add('border-blue-500', 'dark:border-blue-400');
+                    displayBtn.classList.add('opacity-50');
+                    displayBtn.style.pointerEvents = 'none';
+                }
             }
 
             // --- UTILS ---
@@ -1334,6 +1392,77 @@
                 document.getElementById('outModal').classList.add('hidden');
                 document.getElementById('fabContainer').classList.remove('active', 'hidden-fab');
             }
+            
+            // Room Picker Functions
+            openRoomPicker(targetField) {
+                const branchKey = this.user.currentBranch || (this.user.branchCode === '1' ? 'corniche' : 'andalus');
+                const branchRooms = roomsConfig[branchKey] || roomsConfig.corniche;
+                
+                // Render floor buttons
+                const floorButtons = document.getElementById('floorButtons');
+                floorButtons.innerHTML = '';
+                Object.keys(branchRooms).sort((a, b) => parseInt(a) - parseInt(b)).forEach(floor => {
+                    const btn = document.createElement('button');
+                    btn.className = 'p-3 rounded-xl font-bold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-blue-500 hover:text-white transition-colors';
+                    btn.innerText = `الدور ${floor}`;
+                    btn.onclick = () => this.renderRoomsForFloor(floor, branchRooms[floor], targetField);
+                    floorButtons.appendChild(btn);
+                });
+                
+                // Clear room buttons initially
+                document.getElementById('roomButtons').innerHTML = '<p class="col-span-4 text-center text-gray-400 py-4">اختر الدور أولاً</p>';
+                
+                // Store target field for later use
+                this.roomPickerTarget = targetField;
+                document.getElementById('roomPickerModal').classList.remove('hidden');
+            }
+            
+            renderRoomsForFloor(floor, rooms, targetField) {
+                const roomButtons = document.getElementById('roomButtons');
+                roomButtons.innerHTML = '';
+                
+                rooms.forEach(room => {
+                    const btn = document.createElement('button');
+                    btn.className = 'p-4 rounded-xl font-bold bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-500 hover:text-white transition-colors text-lg';
+                    btn.innerText = room;
+                    btn.onclick = () => this.selectRoom(room, targetField);
+                    roomButtons.appendChild(btn);
+                });
+            }
+            
+            selectRoom(roomNumber, targetField) {
+                // Update hidden input
+                const input = document.getElementById(targetField);
+                if(input) {
+                    input.value = roomNumber;
+                    // Trigger change event for validation
+                    input.dispatchEvent(new Event('change'));
+                }
+                
+                // Update display button
+                const displayBtn = document.getElementById(targetField === 'inRoom' ? 'inRoomBtn' : 'outRoomManualBtn');
+                const displaySpan = document.getElementById(targetField === 'inRoom' ? 'inRoomDisplay' : 'outRoomManualDisplay');
+                if(displayBtn && displaySpan) {
+                    displaySpan.innerText = roomNumber;
+                    displaySpan.classList.remove('text-gray-400');
+                    displaySpan.classList.add('text-gray-800', 'dark:text-white');
+                    displayBtn.classList.add('border-blue-500', 'dark:border-blue-400');
+                }
+                
+                // Check if room is active (for entry modal)
+                if(targetField === 'inRoom') {
+                    this.checkRoomActive(roomNumber);
+                }
+                
+                // Close picker
+                this.closeRoomPicker();
+            }
+            
+            closeRoomPicker() {
+                document.getElementById('roomPickerModal').classList.add('hidden');
+                this.roomPickerTarget = null;
+            }
+            
             openEntryModal() {
                 document.getElementById('entryModal').classList.remove('hidden');
                 document.getElementById('fabContainer').classList.add('hidden-fab');
@@ -1343,6 +1472,17 @@
                 document.getElementById('inNotes').value = '';
                 document.getElementById('valAdl').innerText = '0';
                 document.getElementById('valChd').innerText = '0';
+                // Reset room display
+                const inRoomDisplay = document.getElementById('inRoomDisplay');
+                if(inRoomDisplay) {
+                    inRoomDisplay.innerText = 'اختر الغرفة';
+                    inRoomDisplay.classList.remove('text-gray-800', 'dark:text-white');
+                    inRoomDisplay.classList.add('text-gray-400');
+                }
+                const inRoomBtn = document.getElementById('inRoomBtn');
+                if(inRoomBtn) {
+                    inRoomBtn.classList.remove('border-blue-500', 'dark:border-blue-400');
+                }
                 // Hide room warning
                 const warning = document.getElementById('roomActiveWarning');
                 if(warning) warning.classList.add('hidden');
@@ -1362,19 +1502,22 @@
                 
                 if(!warning || !warningText) return;
                 
+                // Convert to string if it's a number
+                const roomStr = roomNumber ? String(roomNumber) : '';
+                
                 // Hide warning if room is empty
-                if(!roomNumber || roomNumber.trim() === '') {
+                if(!roomStr || roomStr.trim() === '') {
                     warning.classList.add('hidden');
                     return;
                 }
                 
-                // Check if room is active
-                const activeRoom = this.data.find(i => i.room === roomNumber && i.type === 'in');
+                // Check if room is active (compare as strings)
+                const activeRoom = this.data.find(i => String(i.room) === roomStr && i.type === 'in');
                 
                 if(activeRoom) {
                     // Show warning with room details
                     const inTime = this.formatTime12(activeRoom.inTime);
-                    warningText.innerText = `⚠️ الغرفة ${roomNumber} نشطة حالياً (دخول: ${inTime})`;
+                    warningText.innerText = `⚠️ الغرفة ${roomStr} نشطة حالياً (دخول: ${inTime})`;
                     warning.classList.remove('hidden');
                     
                     // Also highlight the input field
@@ -1398,6 +1541,17 @@
                 document.getElementById('outTimeManual').value = this.tick();
                 document.getElementById('outNotes').value = '';
                 document.getElementById('outRec').value = '';
+                // Reset room display
+                const outRoomDisplay = document.getElementById('outRoomManualDisplay');
+                if(outRoomDisplay) {
+                    outRoomDisplay.innerText = 'اختر الغرفة';
+                    outRoomDisplay.classList.remove('text-gray-800', 'dark:text-white');
+                    outRoomDisplay.classList.add('text-gray-400');
+                }
+                const outRoomBtn = document.getElementById('outRoomManualBtn');
+                if(outRoomBtn) {
+                    outRoomBtn.classList.remove('border-blue-500', 'dark:border-blue-400');
+                }
                 // Load reception staff for current branch before rendering buttons
                 this.loadReceptionStaff();
                 this.renderReceptionButtons('out');
@@ -1414,6 +1568,17 @@
                         chip.innerHTML = `<span class="block font-bold text-lg">${item.room}</span><span class="text-[10px] text-gray-400">${this.formatTime12(item.inTime)}</span>`;
                         chip.onclick = () => {
                             document.getElementById('outRoomManual').value = item.room;
+                            // Update display
+                            const displaySpan = document.getElementById('outRoomManualDisplay');
+                            if(displaySpan) {
+                                displaySpan.innerText = item.room;
+                                displaySpan.classList.remove('text-gray-400');
+                                displaySpan.classList.add('text-gray-800', 'dark:text-white');
+                            }
+                            const btn = document.getElementById('outRoomManualBtn');
+                            if(btn) {
+                                btn.classList.add('border-blue-500', 'dark:border-blue-400');
+                            }
                         };
                         sug.appendChild(chip);
                     });
